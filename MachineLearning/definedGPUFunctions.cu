@@ -30,6 +30,18 @@ __global__ void sigmoidPrime_kernel(const float* __restrict src, float* __restri
     }
 }
 
+__global__ void addKernel(const float *a, const float *b, float *c) {
+    c[blockIdx.x] = a[blockIdx.x] + b[blockIdx.x];
+}
+
+__global__ void subKernel(const float* a, const float* b, float* c) {
+    c[blockIdx.x] = a[blockIdx.x] - b[blockIdx.x];
+}
+
+__global__ void addKernal(const float* a, const float* b, float* c) {
+    c[blockIdx.x] = a[blockIdx.x] * b[blockIdx.x];
+}
+
 void definedGPUFunctions::sigmoidMatCWiseGPUMem(float* A, float* B, int len) {
     dim3 dimBlock(256);
     int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
