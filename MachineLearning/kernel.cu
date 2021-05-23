@@ -22,7 +22,7 @@ void GPU_fill_rand(float* A, int nr_rows_A, int nr_cols_A) {
 
 // Multiply the arrays A and B on GPU and save the result in C
 // C(m,n) = A(m,k) * B(k,n)
-void gpu_blas_mmul(const float* A, const float* B, float* C, const int m, const int k, const int n) {
+void gpu_blas_mmul(cublasHandle_t handle, const float* A, const float* B, float* C, const int m, const int k, const int n) {
 	int lda = m, ldb = k, ldc = m;
 	const float alf = 1;
 	const float bet = 0;
@@ -30,8 +30,7 @@ void gpu_blas_mmul(const float* A, const float* B, float* C, const int m, const 
 	const float* beta = &bet;
 
 	// Create a handle for CUBLAS
-	cublasHandle_t handle;
-	cublasCreate(&handle);
+	
 
 	// Do the actual multiplication
 	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
@@ -52,13 +51,13 @@ void print_matrix(const float* A, int nr_rows_A, int nr_cols_A) {
 	}
 	std::cout << std::endl;
 }
-
+/*
 int main() {
 	// Allocate 3 arrays on CPU
 	int nr_rows_A, nr_cols_A, nr_rows_B, nr_cols_B, nr_rows_C, nr_cols_C;
 
 	// for simplicity we are going to use square arrays
-	nr_rows_A = nr_cols_A = nr_rows_B = nr_cols_B = nr_rows_C = nr_cols_C = 10000;
+	nr_rows_A = nr_cols_A = nr_rows_B = nr_cols_B = nr_rows_C = nr_cols_C = 1000;
 
 	float* h_A = (float*)malloc(nr_rows_A * nr_cols_A * sizeof(float));
 	float* h_B = (float*)malloc(nr_rows_B * nr_cols_B * sizeof(float));
@@ -86,10 +85,14 @@ int main() {
 	//std::cout << "B =" << std::endl;
 	//print_matrix(h_B, nr_rows_B, nr_cols_B);
 
-	auto start = high_resolution_clock::now();
+	
+	
+	cublasHandle_t handle;
+	cublasCreate(&handle);
 
 	// Multiply A and B on GPU
-	gpu_blas_mmul(d_A, d_B, d_C, nr_rows_A, nr_cols_A, nr_cols_B);
+	auto start = high_resolution_clock::now();
+	gpu_blas_mmul(handle,d_A, d_B, d_C, nr_rows_A, nr_cols_A, nr_cols_B);
 
 	// Copy (and print) the result on host memory
 	cudaMemcpy(h_C, d_C, nr_rows_C * nr_cols_C * sizeof(float), cudaMemcpyDeviceToHost);
@@ -112,4 +115,4 @@ int main() {
 	free(h_C);
 
 	return 0;
-}
+}*/
