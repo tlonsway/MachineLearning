@@ -60,15 +60,14 @@ public:
 };
 
 int main() {
-	int m = 10000;
-	int k = 10000;
+	int m = 200; //m=200,k=200,n=1 will show about equal CPU and GPU performance, higher values will always be faster on the GPU.
+	int k = 200;
 	int n = 1;
 	float* gpuA = (float*)malloc(sizeof(float) * m * k);
 	float* gpuB = (float*)malloc(sizeof(float) * k * n);
 	float* gpuC = (float*)malloc(sizeof(float) * m * n);
-
-	gpuMath::randMatCPUMem(gpuA, m, n);
-	gpuMath::randMatCPUMem(gpuB, n, k);
+	gpuMath::randMatCPUMem(gpuA, m, k);
+	gpuMath::randMatCPUMem(gpuB, k, n);
 	float* AGPUMem, * BGPUMem, * CGPUMem;
 	cudaMalloc(&AGPUMem, m * k * sizeof(float));
 	cudaMalloc(&BGPUMem, k * n * sizeof(float));
