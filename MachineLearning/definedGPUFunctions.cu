@@ -38,8 +38,20 @@ __global__ void subKernel(const float* a, const float* b, float* c) {
     c[blockIdx.x] = a[blockIdx.x] - b[blockIdx.x];
 }
 
-__global__ void addKernal(const float* a, const float* b, float* c) {
+__global__ void multCompKernel(const float* a, const float* b, float* c) {
     c[blockIdx.x] = a[blockIdx.x] * b[blockIdx.x];
+}
+
+void definedGPUFunctions::addMatCWiseGPUMem(float *a, float *b, float *c) {
+    addKernel(a, b, c);
+}
+
+void definedGPUFunctions::subMatCWiseGPUMem(float *a, float *b, float *c) {
+    subKernel(a, b, c);
+}
+
+void definedGPUFunctions::multCompCWiseGPUMem(float *a, float *b, float *c){
+    multCompKernel(a, b, c);
 }
 
 void definedGPUFunctions::sigmoidMatCWiseGPUMem(float* A, float* B, int len) {
