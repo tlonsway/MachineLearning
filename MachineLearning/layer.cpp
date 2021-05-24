@@ -128,7 +128,8 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		wMOffset += layers[i] * layers[i + 1];
 	}
 	for (int i = layerNum - 3; i >= 0; i--) {
-		
+		float* lyrWMat;
+		cudaMalloc(&lyrWMat, sizeof(float) * layers[i] * layers[i + 1]);
 
 
 	}
