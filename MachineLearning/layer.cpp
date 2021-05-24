@@ -123,6 +123,10 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaFree(tempComp);
 	cudaFree(yG);
 	//backward pass
+	wMOffset = 0;
+	for (int i = 0; i < layerNum - 3; i++) {
+		wMOffset += layers[i] * layers[i + 1];
+	}
 	for (int i = layerNum - 3; i >= 0; i--) {
 		
 
