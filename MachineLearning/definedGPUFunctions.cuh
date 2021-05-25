@@ -6,4 +6,5 @@ namespace definedGPUFunctions {
 	void addMatCWiseGPUMem(float* a, float* b, float* c);
 	void subMatCWiseGPUMem(float* a, float* b, float* c);
 	void multCompCWiseGPUMem(float* a, float* b, float* c);
+	void multCompCWiseGPUMemScalar(float* a, float f, float* c);
 }

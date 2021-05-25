@@ -29,6 +29,9 @@ void blasOp::gemmStandardFromCPUMem(const float* cpuA, const float* cpuB, float*
 	int lda, ldc, ldb;
 	lda = ldc = m;
 	ldb = k;
+	//ldb = k;
+	//lda = k;
+	//ldb = ldc = n;
 	const float alpha = 1;
 	const float beta = 0;
 	const float* alphaP = &alpha;
@@ -41,6 +44,8 @@ void blasOp::gemmStandardFromGPUMem(const float* A, const float* B, float* C, co
 	int lda, ldc, ldb;
 	lda = ldc = m;
 	ldb = k;
+	//lda = k;
+	//ldb = ldc = n;
 	const float alpha = 1;
 	const float beta = 0;
 	const float* alphaP = &alpha;
@@ -48,10 +53,12 @@ void blasOp::gemmStandardFromGPUMem(const float* A, const float* B, float* C, co
 	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
 
-void blasOp::gemmStandardTransposeAFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n) {
-	int lda, ldc, ldb;
-	lda = ldc = m;
-	ldb = k;
+void blasOp::gemmStandardTransposeAFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, int lda, int ldb, int ldc) {
+	//int lda, ldc, ldb;
+	//lda = ldc = m;
+	//ldb = k;
+	//lda = k;
+	//ldb = ldc = n;
 	const float alpha = 1;
 	const float beta = 0;
 	const float* alphaP = &alpha;
@@ -59,10 +66,25 @@ void blasOp::gemmStandardTransposeAFromGPUMem(const float* A, const float* B, fl
 	cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
 
+void blasOp::gemmStandardTransposeBFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, int lda, int ldb, int ldc) {
+	//int lda, ldc, ldb;
+	//lda = ldc = m;
+	//ldb = k;
+	//lda = k;
+	//ldb = ldc = n;
+	const float alpha = 1;
+	const float beta = 0;
+	const float* alphaP = &alpha;
+	const float* betaP = &beta;
+	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+}
+
 void blasOp::gemmFullFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, const float alpha, const float beta) {
 	int lda, ldc, ldb;
 	lda = ldc = m;
 	ldb = k;
+	//lda = k;
+	//ldb = ldc = n;
 	const float* alphaP = &alpha;
 	const float* betaP = &beta;
 	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);

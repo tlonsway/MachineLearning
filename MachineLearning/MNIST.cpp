@@ -2,6 +2,7 @@
 #include <stdlib.h>		
 #include "graphics.h"
 
+/*
 int main(int argv, char* argc[]) {
 	const int meta_data_size = 16;
 
@@ -46,9 +47,7 @@ int main(int argv, char* argc[]) {
 	fgets(label_data, num_items, fp_labels);
 	fclose(fp_labels);
 
-	/*
-	 YOUR CODE HERE for the training of the network
-	*/
+	//NEURAL NETWORK CODE HERE
 
 	for (int i = 0; i < num_pics; i++) {
 		free(input_data[i]);
@@ -121,4 +120,4 @@ int main(int argv, char* argc[]) {
 	return 0;
 }
 
-
+*/

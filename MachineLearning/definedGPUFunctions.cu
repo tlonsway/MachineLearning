@@ -42,6 +42,10 @@ __global__ void multCompKernel(const float* a, const float* b, float* c) {
     c[blockIdx.x] = a[blockIdx.x] * b[blockIdx.x];
 }
 
+__global__ void multScalarCompKernel(const float* a, float f, float* c) {
+    c[blockIdx.x] = a[blockIdx.x] * f;
+}
+
 void definedGPUFunctions::addMatCWiseGPUMem(float *a, float *b, float *c) {
     addKernel<<<1,1>>>(a, b, c);
 }
@@ -50,8 +54,12 @@ void definedGPUFunctions::subMatCWiseGPUMem(float *a, float *b, float *c) {
     subKernel<<<1,1>>>(a, b, c);
 }
 
-void definedGPUFunctions::multCompCWiseGPUMem(float *a, float *b, float *c){
+void definedGPUFunctions::multCompCWiseGPUMem(float *a, float *b, float *c) {
     multCompKernel<<<1,1>>>(a, b, c);
+}
+
+void definedGPUFunctions::multCompCWiseGPUMemScalar(float* a, float f, float* c) {
+    multScalarCompKernel<<<1, 1>>>(a, f, c);
 }
 
 void definedGPUFunctions::sigmoidMatCWiseGPUMem(float* A, float* B, int len) {

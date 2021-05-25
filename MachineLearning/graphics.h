@@ -1,3 +1,5 @@
+/*
+
 // The winbgim library, Version 6.0, August 9, 2004
 // Written by:
 //      Grant Macklem (Grant.Macklem@colorado.edu)
@@ -360,3 +362,4 @@ int COLOR(int r, int g, int b); // No longer a macro
 
 #endif // WINBGI_H
 
+*/

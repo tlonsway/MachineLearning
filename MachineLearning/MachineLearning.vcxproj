@@ -80,15 +80,22 @@
     <ClCompile Include="gpuMathTest.cpp" />
     <ClCompile Include="gpuMath.cpp" />
     <ClCompile Include="layer.cpp" />
+    <ClCompile Include="MNIST.cpp" />
+    <ClCompile Include="testBackProp.cpp" />
     <ClCompile Include="testFeedForward.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gpuMath.h" />
     <ClInclude Include="definedGPUFunctions.cuh" />
+    <ClInclude Include="graphics.h" />
     <ClInclude Include="layer.h" />
+    <ClInclude Include="winbgim.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="definedGPUFunctions.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="libbgi.a" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
