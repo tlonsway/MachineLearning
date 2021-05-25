@@ -29,7 +29,7 @@ int main() {
 	int layerNum = 3;
 	FullyConnected net(layers, layerNum, lRate);
 	
-	/*
+	
 	//double[][] wMat1 = new double[][] {{0.2,0.3},{0.4,0.5},{0.6,0.7}};
 	//double[][] wMat2 = new double[][]{ {0.8,0.9,1.0},{1.1,1.2,1.3} };
 	//double[] bMat1 = new double[] {1,2,3};
@@ -45,18 +45,16 @@ int main() {
 	xt[0] = 0.3; xt[1] = 0.7;
 	yt[0] = 0; yt[1] = 1;
 	net.backProp(xt, yt);
-	*/
-	//exit(-7);
+	float* testX = (float*)malloc(sizeof(float) * 2);
+	testX[0] = 0.1;
+	testX[1] = 0.8;
+	float* y = net.feedForward(testX);
+	for (int i = 0; i < 2; i++) {
+		std::cout << "Output " << i << " = " << y[i] << std::endl;
+	}
+	exit(-7);
 	
 	//train network
-	/*
-	int* layers = (int*)malloc(sizeof(int) * 3);
-	layers[0] = 2;
-	layers[1] = 3;
-	layers[2] = 2;
-	float lRate = 0.1;
-	int layerNum = 3;
-	FullyConnected net(layers, layerNum, lRate);*/
 	for (int i = 0; i < 1000; i++) {
 		float* x = (float*)malloc(sizeof(float) * 2);
 		float* y = (float*)malloc(sizeof(float) * 2);
