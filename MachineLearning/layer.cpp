@@ -62,6 +62,18 @@ float* FullyConnected::feedForward(const float* x) {
 }
 
 void FullyConnected::backProp(const float* x, const float* y) {
+	bool veryVerbose = false;
+	if (veryVerbose) {
+		int rTotTemp = 0;
+		for (int i = 0; i < layerNum - 1; i++) {
+			float* tCPUVal = (float*)malloc(sizeof(float) * layers[i] * layers[i + 1]);
+			cudaMemcpy(tCPUVal, (wMat + rTotTemp), sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToHost);
+			std::cout << "Layer " << i << std::endl;
+			blas.print_matrix(tCPUVal, layers[i + 1], layers[i]);
+			std::cout << std::endl;
+			rTotTemp += layers[i] * layers[i + 1];
+		}
+	}
 	//hard-coded using quadratic cost function
 	float* nodes;
 	float* activations;
@@ -92,7 +104,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		float* lyrBMat;
 		cudaMalloc(&lyrWMat, sizeof(float) * layers[i] * layers[i + 1]);
 		cudaMalloc(&lyrBMat, sizeof(float) * layers[i + 1]);
-		cudaMemcpy(lyrWMat, (wMat + wMOffset), sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToDevice); //this step is working correctly
+		cudaMemcpy(lyrWMat, (wMat + wMOffset), sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToDevice); //step works correctly
 		cudaMemcpy(lyrBMat, (bMat + bMOffset), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
 		wMOffset += (layers[i] * layers[i + 1]);
 		bMOffset += (layers[i + 1]);
@@ -102,7 +114,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		blas.gemmStandardFromGPUMem(lyrWMat, xG, xGnext, layers[i + 1], layers[i], 1);
 		blas.axpyStandardFromGPUMem(lyrBMat, xGnext, layers[i + 1]);
 		//SET NODES[layer] TO THIS BEFORE ACTIVATION FUNCTION IS APPLIED
-		cudaMemcpy((nodes+nodesOffset), xGnext, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaMemcpy((nodes + nodesOffset), xGnext, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
 		nodesOffset += layers[i + 1];
 		definedGPUFunctions::sigmoidMatCWiseGPUMem(xGnext, xGnext, layers[i + 1]);
 		//SET ACTIVATIONS[layer] TO THIS AFTER ACTIVATION FUNCTION IS APPLIED
@@ -122,10 +134,10 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaMalloc(&yG, sizeof(float) * layers[layerNum - 1]);
 	cudaMemcpy(yG, y, sizeof(float) * layers[layerNum - 1], cudaMemcpyHostToDevice);
 	definedGPUFunctions::subMatCWiseGPUMem(xG, yG, xG);
-	cudaMemcpy(tempComp, (nodes+lTot-layers[layerNum-1]), sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToDevice);
+	cudaMemcpy(tempComp, (nodes + lTot - layers[layerNum - 1]), sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToDevice);
 	definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(tempComp, tempComp, layers[layerNum - 1]); //tempComp now stores sigmoidPrime output of last layer	
 	definedGPUFunctions::multCompCWiseGPUMem(xG, tempComp, xG); //xG now stores the vector for the error on the output layer of the network
-	cudaMemcpy((layerError+lTot-layers[layerNum-1]), xG, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToDevice);
+	cudaMemcpy((layerError + lTot - layers[layerNum - 1]), xG, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToDevice);
 	cudaFree(tempComp);
 	cudaFree(yG);
 	cudaFree(xG);
@@ -148,14 +160,14 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		eMOffset -= layers[i + 1];
 		float* lyrNodT; //stores nodes[i]
 		cudaMalloc(&lyrNodT, sizeof(float) * layers[i]);
-		cudaMemcpy(lyrNodT, (nodes+nMOffset), sizeof(float) * layers[i], cudaMemcpyDeviceToDevice);
+		cudaMemcpy(lyrNodT, (nodes + nMOffset), sizeof(float) * layers[i], cudaMemcpyDeviceToDevice);
 		nMOffset -= layers[i];
 		cudaMalloc(&tempComp, sizeof(float) * layers[i]); //tempComp stores af.evalPrimeMatrix(nodes[i])
 		definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(lyrNodT, tempComp, layers[i]);
 		float* tempComp2; //stores (wMatrixArr[i+1].transpose().mmul(layerError[i+1]))
 		cudaMalloc(&tempComp2, sizeof(float) * layers[i]);
 		//blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i], layers[i+1], 1);
-		blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i], layers[i + 1], 1, layers[i+1], layers[i+1],layers[i+1]);
+		blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i], layers[i + 1], 1, layers[i + 1], layers[i + 1], layers[i + 1]);
 		definedGPUFunctions::multCompCWiseGPUMem(tempComp2, tempComp, tempComp); //tempComp now stores (wMatrixArr[i+1].transpose().mmul(layerError[i+1])).mul(af.evalPrimeMatrix(nodes[i]))
 		//cudaMemcpy((layerError + lMOffset), tempComp, sizeof(float) * layers[i], cudaMemcpyDeviceToDevice); this line might work, but lMOffset is never modified?
 		cudaMemcpy((layerError + eMOffset), tempComp, sizeof(float) * layers[i], cudaMemcpyDeviceToDevice); //eMOffset might not be the correct value
@@ -165,7 +177,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		cudaFree(tempComp);
 		cudaFree(tempComp2);
 	}
-	
+
 	//perform gradient descent
 	wMOffset = 0;
 	bMOffset = 0;
@@ -176,10 +188,10 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	float* lyrBMat;
 	cudaMalloc(&lyrErrT, sizeof(float) * layers[1]);
 	cudaMalloc(&lyrWMat, sizeof(float) * layers[0] * layers[1]);
-	cudaMalloc(&lyrBMat, sizeof(float)* layers[1]);
-	cudaMemcpy(lyrErrT, (layerError + eMOffset), sizeof(float)* layers[1], cudaMemcpyDeviceToDevice);
-	cudaMemcpy(lyrWMat, (wMat + wMOffset), sizeof(float)* layers[0] * layers[1], cudaMemcpyDeviceToDevice);
-	cudaMemcpy(lyrBMat, (bMat + bMOffset), sizeof(float)* layers[1], cudaMemcpyDeviceToDevice);
+	cudaMalloc(&lyrBMat, sizeof(float) * layers[1]);
+	cudaMemcpy(lyrErrT, (layerError + eMOffset), sizeof(float) * layers[1], cudaMemcpyDeviceToDevice);
+	cudaMemcpy(lyrWMat, (wMat + wMOffset), sizeof(float) * layers[0] * layers[1], cudaMemcpyDeviceToDevice);
+	cudaMemcpy(lyrBMat, (bMat + bMOffset), sizeof(float) * layers[1], cudaMemcpyDeviceToDevice);
 	float* tempComp2;
 	cudaMalloc(&tempComp, sizeof(float) * layers[0] * layers[1]); //tempComp stores layerError[0].mmul(x.transpose())
 	cudaMalloc(&tempComp2, sizeof(float) * layers[0] * layers[1]); //tempComp2 stores (layerError[0].mmul(x.transpose())).mul(lRate)
@@ -197,7 +209,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaMalloc(&tempComp2, sizeof(float) * layers[1]);
 	definedGPUFunctions::multCompCWiseGPUMemScalar(lyrErrT, lRate, tempComp);
 	definedGPUFunctions::subMatCWiseGPUMem(lyrBMat, tempComp, tempComp2);
-	cudaMemcpy(bMat, tempComp2, sizeof(float)* layers[1], cudaMemcpyDeviceToDevice);
+	cudaMemcpy(bMat, tempComp2, sizeof(float) * layers[1], cudaMemcpyDeviceToDevice);
 	eMOffset += layers[1];
 	wMOffset += layers[0] * layers[1];
 	bMOffset += layers[1];
@@ -211,34 +223,34 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		float* lyrWMat;
 		float* lyrBMat;
 		float* lyrAMat;
-		cudaMalloc(&lyrErrT, sizeof(float)* layers[i+1]);
-		cudaMalloc(&lyrWMat, sizeof(float)* layers[i] * layers[i+1]);
-		cudaMalloc(&lyrBMat, sizeof(float)* layers[i+1]);
-		cudaMalloc(&lyrAMat, sizeof(float)* layers[i]);
-		cudaMemcpy(lyrErrT, (layerError + eMOffset), sizeof(float)* layers[i+1], cudaMemcpyDeviceToDevice);
-		cudaMemcpy(lyrWMat, (wMat + wMOffset), sizeof(float)* layers[i] * layers[i+1], cudaMemcpyDeviceToDevice);
-		cudaMemcpy(lyrBMat, (bMat + bMOffset), sizeof(float)* layers[i+1], cudaMemcpyDeviceToDevice);
-		cudaMemcpy(lyrAMat, (activations + aMOffset), sizeof(float)* layers[i], cudaMemcpyDeviceToDevice);
+		cudaMalloc(&lyrErrT, sizeof(float) * layers[i + 1]);
+		cudaMalloc(&lyrWMat, sizeof(float) * layers[i] * layers[i + 1]);
+		cudaMalloc(&lyrBMat, sizeof(float) * layers[i + 1]);
+		cudaMalloc(&lyrAMat, sizeof(float) * layers[i]);
+		cudaMemcpy(lyrErrT, (layerError + eMOffset), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaMemcpy(lyrWMat, (wMat + wMOffset), sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaMemcpy(lyrBMat, (bMat + bMOffset), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaMemcpy(lyrAMat, (activations + aMOffset), sizeof(float) * layers[i], cudaMemcpyDeviceToDevice);
 		float* tempComp2;
-		cudaMalloc(&tempComp, sizeof(float)* layers[i] * layers[i+1]); //tempComp stores layerError[0].mmul(x.transpose())
-		cudaMalloc(&tempComp2, sizeof(float)* layers[i] * layers[i+1]); //tempComp2 stores (layerError[0].mmul(x.transpose())).mul(lRate)
-		
+		cudaMalloc(&tempComp, sizeof(float) * layers[i] * layers[i + 1]); //tempComp stores layerError[0].mmul(x.transpose())
+		cudaMalloc(&tempComp2, sizeof(float) * layers[i] * layers[i + 1]); //tempComp2 stores (layerError[0].mmul(x.transpose())).mul(lRate)
+
 		//blas.gemmStandardTransposeBFromGPUMem(lyrErrT, lyrAMat, tempComp, layers[i+1], 1, layers[i]);
 		blas.gemmStandardFromGPUMem(lyrErrT, lyrAMat, tempComp, layers[i + 1], layers[i], 1);
-		
+
 		definedGPUFunctions::multCompCWiseGPUMemScalar(tempComp, lRate, tempComp2);
 		definedGPUFunctions::subMatCWiseGPUMem(lyrWMat, tempComp2, tempComp); //tempComp now stores wMatrixArr[0].sub((layerError[0].mmul(x.transpose())).mul(lRate));
-		cudaMemcpy(wMat, tempComp, sizeof(float)* layers[i] * layers[i+1], cudaMemcpyDeviceToDevice);
+		cudaMemcpy((wMat + wMOffset), tempComp, sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToDevice);
 		cudaFree(tempComp); //stores layerError[0].mul(lRate)
 		cudaFree(tempComp2); //stores bMatrixArr[0].sub(layerError[0].mul(lRate))
-		cudaMalloc(&tempComp, sizeof(float)* layers[i+1]);
-		cudaMalloc(&tempComp2, sizeof(float)* layers[i+1]);
+		cudaMalloc(&tempComp, sizeof(float) * layers[i + 1]);
+		cudaMalloc(&tempComp2, sizeof(float) * layers[i + 1]);
 		definedGPUFunctions::multCompCWiseGPUMemScalar(lyrErrT, lRate, tempComp);
 		definedGPUFunctions::subMatCWiseGPUMem(lyrBMat, tempComp, tempComp2);
-		cudaMemcpy(bMat, tempComp2, sizeof(float)* layers[i+1], cudaMemcpyDeviceToDevice);
-		eMOffset += layers[i+1];
-		wMOffset += layers[i] * layers[i+1];
-		bMOffset += layers[i+1];
+		cudaMemcpy((bMat + bMOffset), tempComp2, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		eMOffset += layers[i + 1];
+		wMOffset += layers[i] * layers[i + 1];
+		bMOffset += layers[i + 1];
 		aMOffset += layers[i];
 		cudaFree(lyrErrT);
 		cudaFree(lyrWMat);
@@ -246,6 +258,18 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		cudaFree(lyrAMat);
 		cudaFree(tempComp);
 		cudaFree(tempComp2);
+	}
+	veryVerbose = false;
+	if (veryVerbose) {
+		int rTotTemp = 0;
+		for (int i = 0; i < layerNum - 1; i++) {
+			float* tCPUVal = (float*)malloc(sizeof(float) * layers[i] * layers[i + 1]);
+			cudaMemcpy(tCPUVal, (wMat + rTotTemp), sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToHost);
+			std::cout << "Layer " << i << std::endl;
+			blas.print_matrix(tCPUVal, layers[i + 1], layers[i]);
+			std::cout << std::endl;
+			rTotTemp += layers[i] * layers[i + 1];
+		}
 	}
 }
 

@@ -27,7 +27,7 @@ int main() {
 	int layerNum = 3;
 	FullyConnected net(layers, layerNum, lRate);
 	//train network
-	for (int i = 0; i < 10000; i++) {
+	for (int i = 0; i < 1000; i++) {
 		float* x = (float*)malloc(sizeof(float) * 2);
 		float* y = (float*)malloc(sizeof(float) * 2);
 		float x1 = ((float)(rand()%100))/100.0;
