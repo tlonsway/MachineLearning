@@ -90,6 +90,14 @@ void blasOp::gemmFullFromGPUMem(const float* A, const float* B, float* C, const 
 	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
 
+void blasOp::geamTransposeSingleGPUMem(float* A, float* B, int m, int n) {
+	float alpha = 1;
+	float beta = 0;
+	float* alphaP = &alpha;
+	float* betaP = &beta;
+	cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, alphaP, A, n, betaP, B, m, B, m);
+}
+
 void blasOp::randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A) {
 	curandGenerator_t prng;
 	curandCreateGenerator(&prng, CURAND_RNG_PSEUDO_DEFAULT);

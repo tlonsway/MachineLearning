@@ -30,36 +30,68 @@ __global__ void sigmoidPrime_kernel(const float* __restrict src, float* __restri
     }
 }
 
-__global__ void addKernel(const float *a, const float *b, float *c) {
-    c[blockIdx.x] = a[blockIdx.x] + b[blockIdx.x];
+__global__ void addKernel(const float *a, const float *b, float *c, int len) {
+    int stride = gridDim.x * blockDim.x;
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    for (int i = tid; i < len; i += stride) {
+        c[i] = a[i] + b[i];
+    }
 }
 
-__global__ void subKernel(const float* a, const float* b, float* c) {
-    c[blockIdx.x] = a[blockIdx.x] - b[blockIdx.x];
+__global__ void subKernel(const float* a, const float* b, float* c, int len) {
+    int stride = gridDim.x * blockDim.x;
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    for (int i = tid; i < len; i += stride) {
+        c[i] = a[i] - b[i];
+    }
 }
 
-__global__ void multCompKernel(const float* a, const float* b, float* c) {
-    c[blockIdx.x] = a[blockIdx.x] * b[blockIdx.x];
+__global__ void multCompKernel(const float* a, const float* b, float* c, int len) {
+    int stride = gridDim.x * blockDim.x;
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    for (int i = tid; i < len; i += stride) {
+        c[i] = a[i] * b[i];
+    }
 }
 
-__global__ void multScalarCompKernel(const float* a, float f, float* c) {
-    c[blockIdx.x] = a[blockIdx.x] * f;
+__global__ void multScalarCompKernel(const float* a, float f, float* c, int len) {
+    int stride = gridDim.x * blockDim.x;
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    for (int i = tid; i < len; i += stride) {
+        c[i] = a[i] * f;
+    }
 }
 
-void definedGPUFunctions::addMatCWiseGPUMem(float *a, float *b, float *c) {
-    addKernel<<<1,1>>>(a, b, c);
+void definedGPUFunctions::addMatCWiseGPUMem(float *a, float *b, float *c, int len) {
+    dim3 dimBlock(256);
+    int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
+    if (threadBlocks > 65520) threadBlocks = 65520;
+    dim3 dimGrid(threadBlocks);
+    addKernel<<<dimGrid, dimBlock >>>(a, b, c,len);
 }
 
-void definedGPUFunctions::subMatCWiseGPUMem(float *a, float *b, float *c) {
-    subKernel<<<1,1>>>(a, b, c);
+void definedGPUFunctions::subMatCWiseGPUMem(float *a, float *b, float *c, int len) {
+    dim3 dimBlock(256);
+    int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
+    if (threadBlocks > 65520) threadBlocks = 65520;
+    dim3 dimGrid(threadBlocks);
+    subKernel<<<dimGrid, dimBlock >>>(a, b, c,len);
 }
 
-void definedGPUFunctions::multCompCWiseGPUMem(float *a, float *b, float *c) {
-    multCompKernel<<<1,1>>>(a, b, c);
+void definedGPUFunctions::multCompCWiseGPUMem(float *a, float *b, float *c, int len) {
+    dim3 dimBlock(256);
+    int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
+    if (threadBlocks > 65520) threadBlocks = 65520;
+    dim3 dimGrid(threadBlocks);
+    multCompKernel<<<dimGrid, dimBlock >>>(a, b, c,len);
 }
 
-void definedGPUFunctions::multCompCWiseGPUMemScalar(float* a, float f, float* c) {
-    multScalarCompKernel<<<1, 1>>>(a, f, c);
+void definedGPUFunctions::multCompCWiseGPUMemScalar(float* a, float f, float* c, int len) {
+    dim3 dimBlock(256);
+    int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
+    if (threadBlocks > 65520) threadBlocks = 65520;
+    dim3 dimGrid(threadBlocks);
+    multScalarCompKernel<<<dimGrid, dimBlock >>>(a, f, c,len);
 }
 
 void definedGPUFunctions::sigmoidMatCWiseGPUMem(float* A, float* B, int len) {
