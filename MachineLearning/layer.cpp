@@ -127,6 +127,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	wMOffset = 0;
 	int eMOffset = lTot - layers[layerNum - 1] - layers[layerNum - 2];
 	int nMOffset = lTot - layers[layerNum - 1] - layers[layerNum - 2] - layers[layerNum - 3];
+	int lMOffset = lTot - layers[layerNum - 1] - layers[layerNum - 2] - layers[layerNum - 3];
 	for (int i = 0; i < layerNum - 2; i++) {
 		wMOffset += layers[i] * layers[i + 1];
 	}
@@ -146,14 +147,16 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		cudaMalloc(&tempComp, sizeof(float) * layers[i]); //tempComp stores af.evalPrimeMatrix(nodes[i])
 		definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(lyrNodT, tempComp, layers[i]);
 		float* tempComp2; //stores (wMatrixArr[i+1].transpose().mmul(layerError[i+1]))
-
-
-
-
+		cudaMalloc(&tempComp2, sizeof(float) * layers[i]);
+		blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i], layers[i+1], 1);
+		definedGPUFunctions::multCompCWiseGPUMem(tempComp2, tempComp, tempComp); //tempComp now stores (wMatrixArr[i+1].transpose().mmul(layerError[i+1])).mul(af.evalPrimeMatrix(nodes[i]))
+		cudaMemcpy((layerError + lMOffset), tempComp, sizeof(float) * layers[i], cudaMemcpyDeviceToDevice);
 		cudaFree(lyrWMat);
+		cudaFree(lyrErrT);
+		cudaFree(lyrNodT);
+		cudaFree(tempComp);
+		cudaFree(tempComp2);
 	}
-
-
 	//perform gradient descent
 
 

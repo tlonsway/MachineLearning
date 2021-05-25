@@ -47,6 +47,18 @@ void blasOp::gemmStandardFromGPUMem(const float* A, const float* B, float* C, co
 	const float* betaP = &beta;
 	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
+
+void blasOp::gemmStandardTransposeAFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n) {
+	int lda, ldc, ldb;
+	lda = ldc = m;
+	ldb = k;
+	const float alpha = 1;
+	const float beta = 0;
+	const float* alphaP = &alpha;
+	const float* betaP = &beta;
+	cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+}
+
 void blasOp::gemmFullFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, const float alpha, const float beta) {
 	int lda, ldc, ldb;
 	lda = ldc = m;
