@@ -89,6 +89,7 @@
     <ClInclude Include="definedGPUFunctions.cuh" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="layer.h" />
+    <ClInclude Include="MNIST.h" />
     <ClInclude Include="winbgim.h" />
   </ItemGroup>
   <ItemGroup>
