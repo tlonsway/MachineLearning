@@ -64,7 +64,7 @@ int main(int argv, char* argc[]) {
 	int num_items = label_nums[1];
 	unsigned char* label_data = (unsigned char*)malloc(num_items);
 	fread(label_data, 1, num_items, fp_labels);
-
+	fclose(fp_labels);
 	printf("\n===============================================================\n");
 	int image_num = 1000;
 	display_image(input_data[image_num], label_data[image_num], 0);
@@ -91,29 +91,44 @@ int main(int argv, char* argc[]) {
 	}
 
 	//loads the buffers
-	//fgets(buffer, meta_data_size, fp_test_images);
-	int num_test_pics = buffer[4];
-	char** test_images = (char**)malloc(num_test_pics);
-	for (int i = 0; i < num_test_pics; i++) {
-		char* buf = (char *)malloc(pic_height*pic_width);
-		fgets(buf, pic_height * pic_width, fp_test_images);
+	fread(buffer, 1, meta_data_size, fp_test_images);
+	image_nums[4];
+	for (int i = 0; i < 4; i++) {
+		int temp = 0;
+		for (int j = 0; j < sizeof(int); j++) {
+			temp += (buffer[j + (i * 4)] << (sizeof(int) - 1 - j) * 8);
+		}
+		image_nums[i] = temp;
+	}
+	num_pics = image_nums[1];
+	unsigned char** test_images = (unsigned char**)malloc(num_pics * sizeof(unsigned char*));
+	for (int i = 0; i < num_pics; i++) {
+		unsigned char* buf = (unsigned char*)malloc(pic_width * pic_height);
+		int ret = fread(buf, 1, pic_width * pic_height, fp_inputs);
+		if (ferror(fp_inputs)) {
+			printf("An error has occured\n");
+		}
 		test_images[i] = buf;
 	}
-	//fgets(buffer, meta_data_size / 2, fp_test_labels);
-	int num_test_labels = buffer[4];
-	char* test_labels = (char*)malloc(num_test_labels);
-	fgets(test_labels, num_test_labels, fp_test_labels);
+	fclose(fp_test_images);
+
+	fread(buffer, 1, meta_data_size / 2, fp_test_labels);
+	for (int i = 0; i < 2; i++) {
+		int temp = 0;
+		for (int j = 0; j < sizeof(int); j++) {
+			temp += (buffer[j + (i * 4)] << (sizeof(int) - 1 - j) * 8);
+		}
+		label_nums[i] = temp;
+	}
+	num_items = label_nums[1];
+	unsigned char* test_labels = (unsigned char*)malloc(num_items);
+	fread(test_labels , 1, num_items, fp_test_labels);
+	fclose(fp_test_labels);
 
 	//displays answers and network guess
-	for (int i = 0; i < num_test_labels; i++) {
-		int guess = 0;
-		for (int j = 0; j < pic_height * pic_width; j++) {
-			printf("%d ", test_images[i][j]);
-		}
-		printf("\n");
-	}
+	//YOUR CODE HERE - display_image() can be used
 
-	for (int i = 0; i < num_test_pics; i++) {
+	for (int i = 0; i < num_pics; i++) {
 		free(test_images[i]);
 	}
 	free(test_images);
