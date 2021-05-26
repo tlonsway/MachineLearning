@@ -19,22 +19,50 @@ int main() {
 
 
 int main() {
-	
-	
-	int* layers = (int*)malloc(sizeof(int) * 3);
-	layers[0] = 2;
-	layers[1] = 3;
-	layers[2] = 2;
-	float lRate = 0.1;
-	int layerNum = 3;
+
+	int layerNum = 4;
+	int* layers = (int*)malloc(sizeof(int) * layerNum);
+	layers[0] = 3;
+	layers[1] = 5;
+	layers[2] = 5;
+	layers[3] = 1;
+	float lRate = 5;
 	FullyConnected net(layers, layerNum, lRate);
-	
-	
+	for (int i = 0; i < 500; i++) {
+		float* x = (float*)malloc(sizeof(float) * 3);
+		float* y = (float*)malloc(sizeof(float));
+		y[0] = 0;
+		for (int j = 0; j < 3; j++) {
+			x[j] = (float)(rand() % 1000) / 1000.0;
+			y[0] = y[0]+x[j];
+		}
+		y[0] = y[0] / 3;
+		net.backProp(x, y);
+	}
+	std::cout << std::endl;
+	for (int i = 0; i < 100; i++) {
+		float* x = (float*)malloc(sizeof(float) * 3);
+		float* y = (float*)malloc(sizeof(float));
+		y[0] = 0;
+		for (int j = 0; j < 3; j++) {
+			x[j] = (float)(rand() % 1000) / 1000.0;
+			y[0] = y[0] + x[j];
+		}
+		y[0] = y[0] / 3;
+		float* outP = (float*)malloc(sizeof(float));
+		outP = net.feedForward(x);
+		std::cout << "Net out: " << outP[0] << " Real Average: " << y[0] << std::endl;
+	}
+
+
+
+
+
 	//double[][] wMat1 = new double[][] {{0.2,0.3},{0.4,0.5},{0.6,0.7}};
 	//double[][] wMat2 = new double[][]{ {0.8,0.9,1.0},{1.1,1.2,1.3} };
 	//double[] bMat1 = new double[] {1,2,3};
 	//double[] bMat2 = new double[] {4, 5};
-	float* wMat = (float*)malloc(sizeof(float) * 12);
+	/*float* wMat = (float*)malloc(sizeof(float) * 12);
 	float* bMat = (float*)malloc(sizeof(float) * 5);
 	wMat[0] = 0.2; wMat[1] = 0.3; wMat[2] = 0.4; wMat[3] = 0.5; wMat[4] = 0.6; wMat[5] = 0.7; wMat[6] = 0.8; wMat[7] = 0.9; wMat[8] = 1.0; wMat[9] = 1.1; wMat[10] = 1.2; wMat[11] = 1.3;
 	bMat[0] = 1; bMat[1] = 2; bMat[2] = 3; bMat[3] = 4; bMat[4] = 5;
@@ -50,9 +78,20 @@ int main() {
 	testX[1] = 0.8;
 	float* y = net.feedForward(testX);
 	for (int i = 0; i < 2; i++) {
-		std::cout << "Output " << i << " = " << y[i] << std::endl;
+		std::cout << "Output 1 " << i << " = " << y[i] << std::endl;
 	}
-	exit(-7);
+	xt[0] = 0.9; xt[1] = 0.1;
+	yt[0] = 1; yt[1] = 0;
+	net.backProp(xt, yt);
+	testX[0] = 0.7;
+	testX[1] = 0.4;
+	y = net.feedForward(testX);
+	for (int i = 0; i < 2; i++) {
+		std::cout << "Output 2 " << i << " = " << y[i] << std::endl;
+	}
+	
+
+	exit(26);
 	
 	//train network
 	for (int i = 0; i < 1000; i++) {
@@ -70,6 +109,10 @@ int main() {
 		}
 		x[0] = x1;
 		x[1] = x2;
+		std::cout << "x0: " << x[0] << std::endl;
+		std::cout << "x1: " << x[1] << std::endl;
+		std::cout << "y0: " << y[0] << std::endl;
+		std::cout << "y1: " << y[1] << std::endl;
 		net.backProp(x, y);
 	}
 	//test network
@@ -84,6 +127,10 @@ int main() {
 		x[1] = x2;
 		float* output = net.feedForward(x);
 		bool correct = false;
+		std::cout << "x0: " << x[0] << std::endl;
+		std::cout << "x1: " << x[1] << std::endl;
+		std::cout << "out0: " << output[0] << std::endl;
+		std::cout << "out1: " << output[1] << std::endl;
 		if (x1 > x2 && output[0] > output[1]) {
 			correct = true;
 		}
@@ -94,8 +141,11 @@ int main() {
 			correct = false;
 		}
 		if (correct) {
+			std::cout << "Correct" << std::endl;
 			numCorrect++;
+		} else {
+			std::cout << "Wrong" << std::endl;
 		}
 	}
-	std::cout << "Percent correct: " << (100 * (float)numCorrect / (float)numTest) << "%" << std::endl;
+	std::cout << "Percent correct: " << (100 * (float)numCorrect / (float)numTest) << "%" << std::endl;*/
 }

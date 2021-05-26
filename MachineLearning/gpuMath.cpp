@@ -106,7 +106,7 @@ void blasOp::randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A) {
 }
 void blasOp::randMatCPUMem(float* A, int m, int n) {
 	for (long i = 0; i < m * n; i++) {
-		*(A + i) = (float)(rand() % 10)/10;
+		*(A + i) = ((float)(rand() % 10)-5)/10;
 	}
 }
 void blasOp::print_matrix(const float* A, int nr_rows_A, int nr_cols_A) {
