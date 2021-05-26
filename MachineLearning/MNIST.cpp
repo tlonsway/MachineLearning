@@ -83,8 +83,8 @@ int main(int argv, char* argc[]) {
 	//opens the files
 	char* test_images_file = "data/MNIST/test_images.bruh";
 	char* test_labels_file = "data/MNIST/test_labels.bruh";
-	FILE* fp_test_images = fopen(test_images_file, "r");
-	FILE* fp_test_labels = fopen(test_labels_file, "r");
+	FILE* fp_test_images = fopen(test_images_file, "rb");
+	FILE* fp_test_labels = fopen(test_labels_file, "rb");
 	if (!fp_test_images || !fp_test_labels) {
 		printf("Error: File not found or trouble reading the data(training)\n");
 		return 0;
@@ -125,6 +125,11 @@ int main(int argv, char* argc[]) {
 	fread(test_labels , 1, num_items, fp_test_labels);
 	fclose(fp_test_labels);
 
+	for (int i = 0; i < num_pics; i++) {
+		int guess = 0;
+		display_image(test_images[i], test_labels[i], guess);
+		getchar();
+	}
 	//displays answers and network guess
 	//YOUR CODE HERE - display_image() can be used
 
@@ -135,7 +140,7 @@ int main(int argv, char* argc[]) {
 	free(test_labels);
 	return 0;
 }
-void display_image(unsigned char *image, int label, int guess) {
+void display_image(unsigned char* image, int label, int guess) {
 	clear();
 	goto(0, 0);
 	int count = 0;
