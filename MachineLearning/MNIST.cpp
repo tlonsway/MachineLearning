@@ -125,9 +125,11 @@ int main(int argv, char* argc[]) {
 	fread(test_labels , 1, num_items, fp_test_labels);
 	fclose(fp_test_labels);
 
+	clear();
 	for (int i = 0; i < num_pics; i++) {
 		int guess = 0;
 		display_image(test_images[i], test_labels[i], guess);
+		printf("Enter 'q' to quit.\n");
 		char c = getchar();
 		if (c == 'q') {
 			break;
@@ -144,13 +146,18 @@ int main(int argv, char* argc[]) {
 	return 0;
 }
 void display_image(unsigned char* image, int label, int guess) {
-	clear();
 	goto(0, 0);
 	int count = 0;
 	for (int i = 0; i < 28; i++) {
 		for (int j = 0; j < 28; j++) {
 			if (image[count] == 0) {
 				printf(" ");
+			}
+			else if(image[count] < 50){
+				printf(".");
+			}
+			else if (image[count] < 150) {
+				printf("*");
 			}
 			else {
 				printf("X");
