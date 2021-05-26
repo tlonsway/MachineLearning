@@ -128,7 +128,10 @@ int main(int argv, char* argc[]) {
 	for (int i = 0; i < num_pics; i++) {
 		int guess = 0;
 		display_image(test_images[i], test_labels[i], guess);
-		getchar();
+		char c = getchar();
+		if (c == 'q') {
+			break;
+		}
 	}
 	//displays answers and network guess
 	//YOUR CODE HERE - display_image() can be used
