@@ -17,7 +17,7 @@ int main() {
 
 
 
-
+/*
 int main() {
 
 	int layerNum = 4;
@@ -56,7 +56,7 @@ int main() {
 
 
 
-
+	*/
 
 	//double[][] wMat1 = new double[][] {{0.2,0.3},{0.4,0.5},{0.6,0.7}};
 	//double[][] wMat2 = new double[][]{ {0.8,0.9,1.0},{1.1,1.2,1.3} };
@@ -148,4 +148,4 @@ int main() {
 		}
 	}
 	std::cout << "Percent correct: " << (100 * (float)numCorrect / (float)numTest) << "%" << std::endl;*/
-}
+//}
