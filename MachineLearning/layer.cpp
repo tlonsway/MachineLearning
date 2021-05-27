@@ -37,6 +37,16 @@ void FullyConnected::setBMat(float* o) {
 	cudaMalloc(&bMat, sizeof(float) * 5);
 	cudaMemcpy(bMat, o, sizeof(float) * 5, cudaMemcpyHostToDevice);
 }
+
+
+
+
+
+
+
+
+
+
 float* FullyConnected::feedForward(const float* x) {
 	//input and output are both pointers to vector on the CPU, function automatically loads and unloads data from GPU
 	float* xG;

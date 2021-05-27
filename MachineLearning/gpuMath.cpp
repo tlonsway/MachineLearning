@@ -4,6 +4,7 @@
 #include <cublas_v2.h>
 #include <curand.h>
 #include <iostream>
+#include "animations.h"
 
 using namespace gpuMath;
 
@@ -136,11 +137,26 @@ void blasOp::randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A) {
 }
 void blasOp::randMatCPUMem(float* A, int m, int n) {
 	srand(time(0));
-	for (long i = 0; i < m * n; i++) {
-		float num = ((float)(rand() % 200) - 100) / 100.0;
-		//std::cout << "num: " << num << std::endl;
+	long len = (long)m * (long)n;
+	long i;
+	for (i = 0; i < len % 10; i++) {
+		float num = ((float)(rand() % 200) - 100.0) / 100.0;
 		*(A + i) = num;
 	}
+	for (; i < len; i+=10) {
+		*(A + i) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i+1) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 2) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 3) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 4) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 5) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 6) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 7) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 8) = ((float)(rand() % 200) - 100.0) / 100.0;
+		*(A + i + 9) = ((float)(rand() % 200) - 100.0) / 100.0;
+		progress_bar(i, len, "Generating Random Values");
+	}
+	std::cout << std::endl;
 }
 void blasOp::print_matrix(const float* A, int nr_rows_A, int nr_cols_A) {
 	for (int i = 0; i < nr_rows_A; ++i) {

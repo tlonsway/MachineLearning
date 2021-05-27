@@ -28,34 +28,40 @@ void display_image(unsigned char* image, int label, int guess) {
 }
 
 void progress_bar(float position, float end_point, std::string title) {
-	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	//printf("\r");
-	//for (int i = 0; i < 20; i++) {
-	//	printf(" ");
-	//}
-	printf("\r");
-	//goto(0,0);
-	//printf("(%s) ", title);
-	std::cout << "(" << title << ") ";
-	float percent = position / end_point;
-	printf("[");
-	int tip = 0;
-	//SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
-	for (int i = 0; i < 20; i ++) {
-		SetConsoleTextAttribute(hConsole, ((int)(i/3)+9));
-		if (i/20.0 < percent) {
-			//printf("=");
-			printf("%c",(char)(219));
-		}
-		else if (!tip) {
-			printf(">");
-			tip++;
-		}
-		else {
-			SetConsoleTextAttribute(hConsole, 15);
+	int divnum = (int)(end_point / 1000.0);
+	if (divnum == 0) {
+		divnum = 1;
+	}
+	if (((int)position) % divnum == 0) {
+		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		printf("\r");
+		for (int i = 0; i < 40; i++) {
 			printf(" ");
 		}
+		printf("\r");
+		//goto(0,0);
+		//printf("(%s) ", title);
+		std::cout << "(" << title << ") ";
+		float percent = position / end_point;
+		printf("[");
+		int tip = 0;
+		//SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+		for (int i = 0; i < 20; i++) {
+			SetConsoleTextAttribute(hConsole, ((int)(i / 3) + 9));
+			if (i / 20.0 < percent) {
+				//printf("=");
+				printf("%c", (char)(219));
+			}
+			else if (!tip) {
+				printf(">");
+				tip++;
+			}
+			else {
+				SetConsoleTextAttribute(hConsole, 15);
+				printf(" ");
+			}
+		}
+		SetConsoleTextAttribute(hConsole, 15);
+		printf("] %.2f%%", percent * 100);
 	}
-	SetConsoleTextAttribute(hConsole, 15);
-	printf("] %.2f%%", percent*100);
 }

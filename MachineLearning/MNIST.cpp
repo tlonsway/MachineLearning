@@ -98,7 +98,7 @@ int main(int argv, char* argc[]) {
 	int layerNum = 3;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 784;
-	layers[1] = 32;
+	layers[1] = 10000;
 	layers[2] = 10;
 	float lRate = .5;
 	layer::FullyConnected net(layers, layerNum, lRate);
@@ -128,7 +128,7 @@ int main(int argv, char* argc[]) {
 		//else {
 		//	std::cout << "Wrong" << std::endl;
 		//}
-		if (i > 10000) {
+		if (i > 20000) {
 			numTested++;
 			if (nGuessNum == label_data[i]) {
 				numTestedCorrect++;
@@ -138,9 +138,7 @@ int main(int argv, char* argc[]) {
 			delay(0.5);
 		}
 		//gpuMath::blasOp::print_matrix(x, 1, 784);
-		if (i % 100 == 0) {
-			progress_bar(i, 60000, "Training");
-		}
+		progress_bar(i, 60000, "Training");
 		net.backProp(x, y);
 		free(input_data[i]);
 	}
