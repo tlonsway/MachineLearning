@@ -77,6 +77,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="animations.cpp" />
     <ClCompile Include="gpuMathTest.cpp" />
     <ClCompile Include="gpuMath.cpp" />
     <ClCompile Include="layer.cpp" />
@@ -88,6 +89,7 @@
     <ClInclude Include="gpuMath.h" />
     <ClInclude Include="definedGPUFunctions.cuh" />
     <ClInclude Include="graphics.h" />
+    <ClInclude Include="animations.h" />
     <ClInclude Include="layer.h" />
     <ClInclude Include="MNIST.h" />
     <ClInclude Include="winbgim.h" />
