@@ -42,15 +42,18 @@ void blasOp::gemmStandardFromCPUMem(const float* cpuA, const float* cpuB, float*
 void blasOp::gemmStandardFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n) {
 	//A,B,C are all pointers to device(GPU) memory, so transfers are not needed
 	int lda, ldc, ldb;
-	lda = ldc = m;
-	ldb = k;
+	lda = k;
+	ldc = m;
+	ldb = n;
 	//lda = k;
 	//ldb = ldc = n;
 	const float alpha = 1;
 	const float beta = 0;
 	const float* alphaP = &alpha;
 	const float* betaP = &beta;
-	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	//cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	//blas.gemmStandardTransposeABFromGPUMem(in1G, in2G, outG, 4, 2, 3, 2, 3, 4);
+	cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
 
 void blasOp::gemmStandardTransposeAFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, int lda, int ldb, int ldc) {
@@ -59,14 +62,38 @@ void blasOp::gemmStandardTransposeAFromGPUMem(const float* A, const float* B, fl
 	//ldb = k;
 	//lda = k;
 	//ldb = ldc = n;
+	lda = m;
+	ldc = m;
+	ldb = n;
 	const float alpha = 1;
 	const float beta = 0;
 	const float* alphaP = &alpha;
 	const float* betaP = &beta;
-	cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	//cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
 
 void blasOp::gemmStandardTransposeBFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, int lda, int ldb, int ldc) {
+	//int lda, ldc, ldb;
+	//lda = ldc = m;
+	//ldb = k;
+	//lda = k;
+	//ldb = ldc = n;
+	//lda = k;
+	//ldb = n;
+	//ldc = m;
+	lda = k;
+	ldc = m;
+	ldb = k;
+	const float alpha = 1;
+	const float beta = 0;
+	const float* alphaP = &alpha;
+	const float* betaP = &beta;
+	//cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+}
+
+void blasOp::gemmStandardTransposeABFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, int lda, int ldb, int ldc) {
 	//int lda, ldc, ldb;
 	//lda = ldc = m;
 	//ldb = k;
@@ -76,7 +103,8 @@ void blasOp::gemmStandardTransposeBFromGPUMem(const float* A, const float* B, fl
 	const float beta = 0;
 	const float* alphaP = &alpha;
 	const float* betaP = &beta;
-	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	//cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
 
 void blasOp::gemmFullFromGPUMem(const float* A, const float* B, float* C, const int m, const int k, const int n, const float alpha, const float beta) {
@@ -87,7 +115,8 @@ void blasOp::gemmFullFromGPUMem(const float* A, const float* B, float* C, const 
 	//ldb = ldc = n;
 	const float* alphaP = &alpha;
 	const float* betaP = &beta;
-	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	//cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
+	cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n, k, alphaP, A, lda, B, ldb, betaP, C, ldc);
 }
 
 void blasOp::geamTransposeSingleGPUMem(float* A, float* B, int m, int n) {
@@ -95,7 +124,8 @@ void blasOp::geamTransposeSingleGPUMem(float* A, float* B, int m, int n) {
 	float beta = 0;
 	float* alphaP = &alpha;
 	float* betaP = &beta;
-	cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, alphaP, A, n, betaP, B, m, B, m);
+	//cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, alphaP, A, n, betaP, B, m, B, m);
+	cublasSgeam(handle, CUBLAS_OP_N, CUBLAS_OP_T, m, n, alphaP, A, n, betaP, B, m, B, m);
 }
 
 void blasOp::randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A) {
@@ -105,8 +135,11 @@ void blasOp::randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A) {
 	curandGenerateUniform(prng, A, nr_rows_A * nr_cols_A);
 }
 void blasOp::randMatCPUMem(float* A, int m, int n) {
+	srand(time(0));
 	for (long i = 0; i < m * n; i++) {
-		*(A + i) = ((float)(rand() % 10)-5)/10;
+		float num = ((float)(rand() % 200) - 100) / 100.0;
+		//std::cout << "num: " << num << std::endl;
+		*(A + i) = num;
 	}
 }
 void blasOp::print_matrix(const float* A, int nr_rows_A, int nr_cols_A) {

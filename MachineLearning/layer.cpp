@@ -86,6 +86,19 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		}
 		std::cout << std::endl;
 	}
+	if (veryVerbose) {
+		std::cout << "Bias Matrix Before: " << std::endl;
+		int rTotTemp = 0;
+		for (int i = 0; i < layerNum - 1; i++) {
+			float* tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
+			cudaMemcpy(tCPUVal, (bMat + rTotTemp), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
+			std::cout << "Layer " << i << std::endl;
+			blas.print_matrix(tCPUVal, layers[i + 1], 1);
+			std::cout << std::endl;
+			rTotTemp += layers[i + 1];
+		}
+		std::cout << std::endl;
+	}
 	//hard-coded using quadratic cost function
 	float* nodes;
 	float* activations;
@@ -107,6 +120,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaMalloc(&xGOr, sizeof(float) * layers[0]);
 	cudaMemcpy(xG, x, sizeof(float) * layers[0], cudaMemcpyHostToDevice);
 	cudaMemcpy(xGOr, xG, sizeof(float) * layers[0], cudaMemcpyDeviceToDevice);
+	//cudaMemcpy(xGOr, x, sizeof(float) * layers[0], cudaMemcpyHostToDevice);
 	int wMOffset = 0;
 	int bMOffset = 0;
 	for (int i = 0; i < layerNum - 1; i++) {
@@ -139,30 +153,79 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		cudaMemcpy(xG, xGnext, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
 		cudaFree(xGnext);
 	}
-	//calculate output error
+	//calculate output error - this step appears to be working correctly
+	float* tCPUVal2;
+	bool oeVerbose = false;
+
+	//std::cout << "Calculating output error" << std::endl;
+
 	float* tempComp;
 	cudaMalloc(&tempComp, sizeof(float) * layers[layerNum - 1]);
 	float* tempComp3; //tempComp3 stores activations[activations.length-1]
 	cudaMalloc(&tempComp3, sizeof(float) * layers[layerNum - 1]);
 	cudaMemcpy(tempComp3, (activations + lTot - layers[layerNum - 1]), sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToDevice);
+
+	if (oeVerbose) { //tempComp3 is storing the correct value
+		std::cout << "Output Activations=" << std::endl;
+		tCPUVal2 = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
+		cudaMemcpy(tCPUVal2, tempComp3, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
+		blas.print_matrix(tCPUVal2, layers[layerNum - 1], 1);
+		std::cout << std::endl;
+	}
+
 	float* yG; //stores the "ideal" output of the network on the GPU memory 
 	cudaMalloc(&yG, sizeof(float) * layers[layerNum - 1]);
 	cudaMemcpy(yG, y, sizeof(float) * layers[layerNum - 1], cudaMemcpyHostToDevice);
+	
+	if (oeVerbose) { //yG is storing the correct value
+		std::cout << "Y=" << std::endl;
+		tCPUVal2 = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
+		cudaMemcpy(tCPUVal2, yG, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
+		blas.print_matrix(tCPUVal2, layers[layerNum - 1], 1);
+		std::cout << std::endl;
+	}
+	
+	
 	definedGPUFunctions::subMatCWiseGPUMem(tempComp3, yG, tempComp3, layers[layerNum - 1]);
+
+	if (oeVerbose) {
+		std::cout << "subMatCWiseGPUMem=" << std::endl;
+		tCPUVal2 = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
+		cudaMemcpy(tCPUVal2, tempComp3, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
+		blas.print_matrix(tCPUVal2, layers[layerNum - 1], 1);
+		std::cout << std::endl;
+	}
+
 	cudaMemcpy(tempComp, (nodes + lTot - layers[layerNum - 1]), sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToDevice);
 	definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(tempComp, tempComp, layers[layerNum - 1]); //tempComp now stores sigmoidPrime output of last layer	
+
+	if (oeVerbose) {
+		std::cout << "sigmoidPrime(nodes of output)=" << std::endl;
+		tCPUVal2 = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
+		cudaMemcpy(tCPUVal2, tempComp, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
+		blas.print_matrix(tCPUVal2, layers[layerNum - 1], 1);
+		std::cout << std::endl;
+	}
+
 	definedGPUFunctions::multCompCWiseGPUMem(tempComp3, tempComp, tempComp3, layers[layerNum - 1]); //xG now stores the vector for the error on the output layer of the network
 
-
+	if (oeVerbose) {
+		std::cout << "multCompCWiseGPUMem=" << std::endl;
+		tCPUVal2 = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
+		cudaMemcpy(tCPUVal2, tempComp3, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
+		blas.print_matrix(tCPUVal2, layers[layerNum - 1], 1);
+		std::cout << std::endl;
+	}
 
 
 	cudaMemcpy((layerError + lTot - layers[layerNum - 1]), tempComp3, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToDevice);
+	cudaFree(tempComp3);
 	cudaFree(tempComp);
 	cudaFree(yG);
 	cudaFree(xG);
 
 	
-	float* tCPUVal2;/*
+	/*
 	std::cout << "Output Error=" << std::endl;
 	tCPUVal2 = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
 	cudaMemcpy(tCPUVal2, layerError + lTot - layers[layerNum - 1], sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
@@ -171,7 +234,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	*/
 
 	//backward pass
-	bool backwardVerbose = true;
+	bool backwardVerbose = false;
 	if (backwardVerbose) {
 		std::cout << "Starting backward pass" << std::endl;
 	}
@@ -204,7 +267,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		std::cout << std::endl;
 	}
 	*/
-	std::cout << "Backward Pass" << std::endl;
+	//std::cout << "Backward Pass" << std::endl;
 	for (int i = layerNum - 3; i >= 0; i--) {
 		float* lyrWMat; //stores wMatrixArr[i+1]
 		//cudaMalloc(&lyrWMat, sizeof(float) * layers[i] * layers[i + 1]);
@@ -259,7 +322,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(lyrNodT, tempComp, layers[i+1]);
 
 		if (backwardVerbose) {
-			std::cout << "af.evalPrimeMatrix(nodes[i])=" << std::endl;
+			std::cout << "af.evalPrimeMatrix(nodes[i])= " << std::endl;
 			tCPUVal2 = (float*)malloc(sizeof(float) * layers[i+1]);
 			cudaMemcpy(tCPUVal2, tempComp, sizeof(float) * layers[i+1], cudaMemcpyDeviceToHost);
 			blas.print_matrix(tCPUVal2, layers[i+1], 1);
@@ -274,6 +337,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		
 		//blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i], layers[i + 1], 1, layers[i + 1], layers[i+1], layers[i + 1]);
 		//blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i+1], layers[i + 2], 1, layers[i + 2], layers[i + 2], layers[i + 2]);
+		//blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i + 1], layers[i + 2], 1, layers[i + 2], layers[i + 2], layers[i + 1]);
 		blas.gemmStandardTransposeAFromGPUMem(lyrWMat, lyrErrT, tempComp2, layers[i + 1], layers[i + 2], 1, layers[i + 2], layers[i + 2], layers[i + 1]);
 
 		//blas.gemmStandardFromGPUMem(lyrWMat, lyrErrT, tempComp2, layer[])
@@ -287,7 +351,10 @@ void FullyConnected::backProp(const float* x, const float* y) {
 			cudaFree(tCPUVal2);
 		}
 
-		definedGPUFunctions::multCompCWiseGPUMem(tempComp2, tempComp, tempComp2,layers[i+1]); //tempComp now stores (wMatrixArr[i+1].transpose().mmul(layerError[i+1])).mul(af.evalPrimeMatrix(nodes[i]))
+		//definedGPUFunctions::multCompCWiseGPUMem(tempComp2, tempComp, tempComp2,layers[i+1]); //tempComp now stores (wMatrixArr[i+1].transpose().mmul(layerError[i+1])).mul(af.evalPrimeMatrix(nodes[i]))
+		
+		//VERY VERY VERY IMPORTANT!!! I COMMENTED OUT THIS ABOVE LINE FOR DEBUGGING, IT SHOULD NOT BE COMMENTED!!!!! IT WILL CAUSE PROBLEMS!!!!!
+
 
 		if (backwardVerbose) {
 			std::cout << " (wMatrixArr[i+1].transpose().mmul(layerError[i+1])).mul(af.evalPrimeMatrix(nodes[i]))=" << std::endl;
@@ -319,7 +386,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	}
 
 	//perform gradient descent
-	bool gradVerbose = true;
+	bool gradVerbose = false;
 	wMOffset = 0;
 	bMOffset = 0;
 	eMOffset = 0;
@@ -408,10 +475,10 @@ void FullyConnected::backProp(const float* x, const float* y) {
 
 	definedGPUFunctions::subMatCWiseGPUMem(lyrWMat, tempComp2, tempComp,layers[0]*layers[1]); //tempComp now stores wMatrixArr[0].sub((layerError[0].mmul(x.transpose())).mul(lRate));
 
-	cudaMalloc(&tempComp2, sizeof(float)* layers[0] * layers[1]);
-	blas.geamTransposeSingleGPUMem(tempComp, tempComp2, layers[1], layers[0]);
+	//cudaMalloc(&tempComp2, sizeof(float)* layers[0] * layers[1]);
+	//blas.geamTransposeSingleGPUMem(tempComp, tempComp2, layers[1], layers[0]);
 
-	cudaMemcpy(wMat, tempComp2, sizeof(float) * layers[0] * layers[1], cudaMemcpyDeviceToDevice);
+	cudaMemcpy(wMat, tempComp, sizeof(float) * layers[0] * layers[1], cudaMemcpyDeviceToDevice);
 
 	/*
 	std::cout << "Layer " << 0 << " Weight Changed: " << std::endl;
@@ -465,10 +532,10 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		definedGPUFunctions::multCompCWiseGPUMemScalar(tempComp, lRate, tempComp2,layers[i]*layers[i+1]);
 		definedGPUFunctions::subMatCWiseGPUMem(lyrWMat, tempComp2, tempComp,layers[i]*layers[i+1]); //tempComp now stores wMatrixArr[0].sub((layerError[0].mmul(x.transpose())).mul(lRate));
 		
-		cudaMalloc(&tempComp2, sizeof(float)* layers[i] * layers[i + 1]);
-		blas.geamTransposeSingleGPUMem(tempComp, tempComp2, layers[i+1], layers[i]);
+		//cudaMalloc(&tempComp2, sizeof(float)* layers[i] * layers[i + 1]);
+		//blas.geamTransposeSingleGPUMem(tempComp, tempComp2, layers[i+1], layers[i]);
 		
-		cudaMemcpy((wMat + wMOffset), tempComp2, sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaMemcpy((wMat + wMOffset), tempComp, sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToDevice);
 		
 		/*
 		std::cout << "Layer " << i << " Weight Changed: " << std::endl;
@@ -529,37 +596,40 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		std::cout << std::endl;
 	}
 
-	/*
-	std::cout << "Printing nodes:" << std::endl;
-	int nOff = 0;
-	for (int i = 0; i < layerNum - 1; i++) {
-		float* tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
-		cudaMemcpy(tCPUVal, (nodes + nOff), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
-		nOff += layers[i + 1];
-		std::cout << "Layer " << i << std::endl;
-		blas.print_matrix(tCPUVal, layers[i + 1], 1);
-		std::cout << std::endl;
+	bool finalVerbose = false;
+	
+	if (finalVerbose) {
+		std::cout << "Printing nodes:" << std::endl;
+		int nOff = 0;
+		for (int i = 0; i < layerNum - 1; i++) {
+			float* tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
+			cudaMemcpy(tCPUVal, (nodes + nOff), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
+			nOff += layers[i + 1];
+			std::cout << "Layer " << i << std::endl;
+			blas.print_matrix(tCPUVal, layers[i + 1], 1);
+			std::cout << std::endl;
+		}
+		std::cout << "Printing activations:" << std::endl;
+		int aOff = 0;
+		for (int i = 0; i < layerNum - 1; i++) {
+			float* tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
+			cudaMemcpy(tCPUVal, (activations + aOff), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
+			aOff += layers[i + 1];
+			std::cout << "Layer " << i << std::endl;
+			blas.print_matrix(tCPUVal, layers[i + 1], 1);
+			std::cout << std::endl;
+		}
+		int eOff = 0;
+		std::cout << "Printing errors:" << std::endl;
+		for (int i = 0; i < layerNum - 1; i++) {
+			float* tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
+			cudaMemcpy(tCPUVal, (layerError + eOff), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
+			eOff += layers[i + 1];
+			std::cout << "Layer " << i << std::endl;
+			blas.print_matrix(tCPUVal, layers[i + 1], 1);
+			std::cout << std::endl;
+		}
 	}
-	std::cout << "Printing activations:" << std::endl;
-	int aOff = 0;
-	for (int i = 0; i < layerNum - 1; i++) {
-		float* tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
-		cudaMemcpy(tCPUVal, (activations + aOff), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
-		aOff += layers[i + 1];
-		std::cout << "Layer " << i << std::endl;
-		blas.print_matrix(tCPUVal, layers[i + 1], 1);
-		std::cout << std::endl;
-	}
-	int eOff = 0;
-	std::cout << "Printing errors:" << std::endl;
-	for (int i = 0; i < layerNum - 1; i++) {
-		float* tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
-		cudaMemcpy(tCPUVal, (layerError + eOff), sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
-		eOff += layers[i + 1];
-		std::cout << "Layer " << i << std::endl;
-		blas.print_matrix(tCPUVal, layers[i + 1], 1);
-		std::cout << std::endl;
-	}
-	*/
+	
 }
 

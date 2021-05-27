@@ -1,9 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>		
 #include <string.h>
+#include <iostream>
 #include "MNIST.h"
+#include "layer.h"
+#include <time.h>
+#include "animations.h"
+
 #define clear() printf("\033[H\033[J")
 #define goto(x,y) printf("\033[%d;%dH", (y), (x))
+
+void delay(float number_of_seconds)
+{
+	int milli_seconds = (int)(1000.0 * number_of_seconds);
+	clock_t start_time = clock();
+	while (clock() < start_time + milli_seconds);
+}
+
+
+
 int main(int argv, char* argc[]) {
 	const int meta_data_size = 16;
 
@@ -67,14 +82,69 @@ int main(int argv, char* argc[]) {
 	fclose(fp_labels);
 	printf("\n===============================================================\n");
 	int image_num = 1000;
-	display_image(input_data[image_num], label_data[image_num], 0);
-	
+	//display_image(input_data[image_num], label_data[image_num], 0);
+	float** indata = (float**)malloc(sizeof(float*) * num_pics);
+	for (int i = 0; i < num_pics; i++) {
+		float* buffT = (float*)malloc(784 * sizeof(float));
+		for (int j = 0; j < 784; j++) {
+			buffT[j] = (float)input_data[i][j] / 255;
+		}
+		//display_imageFloat(buffT, 0, 0);
+		indata[i] = buffT;
+	}
+
 
 	//NEURAL NETWORK CODE HERE
+	int layerNum = 3;
+	int* layers = (int*)malloc(sizeof(int) * layerNum);
+	layers[0] = 784;
+	layers[1] = 32;
+	layers[2] = 10;
+	float lRate = .5;
+	layer::FullyConnected net(layers, layerNum, lRate);
 
-	for (int i = 0; i < num_pics; i++) {
+	int numTested = 0;
+	int numTestedCorrect = 0;
+	for (int i = 0; i < 60000; i++) {
+		float* x = indata[i];
+		float* y = (float*)malloc(sizeof(float) * 10);
+		for (int i = 0; i < 10; i++) {
+			y[i] = 0;
+		}
+		y[label_data[i]] = 1;
+		float* nGuess = (float*)malloc(sizeof(float) * 10);
+		nGuess = net.feedForward(x);
+		int nGuessNum = 0;
+		float runMax = -10;
+		for (int i = 0; i < 10; i++) {
+			if (nGuess[i] > runMax) {
+				runMax = nGuess[i];
+				nGuessNum = i;
+			}
+		}
+		//if (nGuessNum == label_data[i]) {
+			//std::cout << "Correct" << std::endl;
+		//}
+		//else {
+		//	std::cout << "Wrong" << std::endl;
+		//}
+		if (i > 10000) {
+			numTested++;
+			if (nGuessNum == label_data[i]) {
+				numTestedCorrect++;
+			}
+			std::cout << "Percent correct: " << 100*(float)numTestedCorrect / (float)numTested << "%" << std::endl;
+			display_imageFloat(x, label_data[i], nGuessNum);
+			delay(0.5);
+		}
+		//gpuMath::blasOp::print_matrix(x, 1, 784);
+		if (i % 100 == 0) {
+			progress_bar(i, 60000, "Training");
+		}
+		net.backProp(x, y);
 		free(input_data[i]);
 	}
+	std::cout << std::endl;
 	free(input_data);
 	free(label_data);
 	printf("Training complete.\n");
@@ -127,7 +197,15 @@ int main(int argv, char* argc[]) {
 
 	clear();
 	for (int i = 0; i < num_pics; i++) {
+		float* out = net.feedForward((float*)test_images[i]);
 		int guess = 0;
+		float runMax = -10;
+		for (int i = 0; i < 10; i++) {
+			if (out[i] > runMax) {
+				runMax = out[i];
+				guess = i;
+			}
+		}
 		display_image(test_images[i], test_labels[i], guess);
 		printf("Enter 'q' to quit.\n");
 		char c = getchar();
@@ -145,7 +223,7 @@ int main(int argv, char* argc[]) {
 	free(test_labels);
 	return 0;
 }
-void display_image(unsigned char* image, int label, int guess) {
+void display_image2(unsigned char* image, int label, int guess) {
 	goto(0, 0);
 	int count = 0;
 	for (int i = 0; i < 28; i++) {
@@ -153,10 +231,10 @@ void display_image(unsigned char* image, int label, int guess) {
 			if (image[count] == 0) {
 				printf(" ");
 			}
-			else if(image[count] < 50){
+			else if(image[count] < 50/255){
 				printf(".");
 			}
-			else if (image[count] < 150) {
+			else if (image[count] < 150/255) {
 				printf("*");
 			}
 			else {
@@ -169,3 +247,29 @@ void display_image(unsigned char* image, int label, int guess) {
 	printf("\n\nLabel: %d\n", label);
 	printf("Network guess: %d\n", guess);
 }
+
+void display_imageFloat(float* image, int label, int guess) {
+	goto(0, 0);
+	int count = 0;
+	for (int i = 0; i < 28; i++) {
+		for (int  j = 0; j < 28; j++) {
+			if (image[count] == 0) {
+				printf(" ");
+			}
+			else if (image[count] < 50/255) {
+				printf(".");
+			}
+			else if (image[count] < 150/255) {
+				printf("*");
+			}
+			else {
+				printf("X");
+			}
+			count++;
+		}
+		printf("|\n|");
+	}
+	printf("\n\nLabel: %d\n", label);
+	printf("Network guess: %d\n", guess);
+}
+
