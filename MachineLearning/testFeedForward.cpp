@@ -3,8 +3,8 @@
 
 using namespace layer;
 
-/*
-int main() {
+
+void main233() {
 	int* layers = (int*)malloc(sizeof(int) * 3);
 	layers[0] = 2;
 	layers[1] = 5;
@@ -21,4 +21,3 @@ int main() {
 	}
 	std::cout << std::endl;
 }
-*/

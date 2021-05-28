@@ -19,7 +19,7 @@ void delay(float number_of_seconds)
 
 
 
-int main(int argv, char* argc[]) {
+int main44(int argv, char* argc[]) {
 	const int meta_data_size = 16;
 
 	char* file_inputs;
@@ -98,9 +98,9 @@ int main(int argv, char* argc[]) {
 	int layerNum = 3;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 784;
-	layers[1] = 10000;
+	layers[1] = 32;
 	layers[2] = 10;
-	float lRate = .5;
+	float lRate = .05;
 	layer::FullyConnected net(layers, layerNum, lRate);
 
 	int numTested = 0;
@@ -108,18 +108,18 @@ int main(int argv, char* argc[]) {
 	for (int i = 0; i < 60000; i++) {
 		float* x = indata[i];
 		float* y = (float*)malloc(sizeof(float) * 10);
-		for (int i = 0; i < 10; i++) {
-			y[i] = 0;
+		for (int j = 0; j < 10; j++) {
+			y[j] = 0;
 		}
 		y[label_data[i]] = 1;
 		float* nGuess = (float*)malloc(sizeof(float) * 10);
 		nGuess = net.feedForward(x);
 		int nGuessNum = 0;
 		float runMax = -10;
-		for (int i = 0; i < 10; i++) {
-			if (nGuess[i] > runMax) {
-				runMax = nGuess[i];
-				nGuessNum = i;
+		for (int j = 0; j < 10; j++) {
+			if (nGuess[j] > runMax) {
+				runMax = nGuess[j];
+				nGuessNum = j;
 			}
 		}
 		//if (nGuessNum == label_data[i]) {
@@ -133,8 +133,10 @@ int main(int argv, char* argc[]) {
 			if (nGuessNum == label_data[i]) {
 				numTestedCorrect++;
 			}
-			std::cout << "Percent correct: " << 100*(float)numTestedCorrect / (float)numTested << "%" << std::endl;
 			display_imageFloat(x, label_data[i], nGuessNum);
+			if (i > 20020) {
+				std::cout << "Percent correct: " << 100 * (float)numTestedCorrect / (float)numTested << "%" << std::endl;
+			}
 			delay(0.5);
 		}
 		//gpuMath::blasOp::print_matrix(x, 1, 784);

@@ -4,10 +4,12 @@
 #include <curand.h>
 #include <iostream>
 #include "definedGPUFunctions.cuh"
+#include <windows.h>
 
 using namespace layer;
 
 FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	layers = lys;
 	layerNum = lysN;
 	lRate = lr;
@@ -26,28 +28,197 @@ FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
 	gpuMath::blasOp::randMatCPUMem(tBm, bMatSizeTot, 1);
 	cudaMemcpy(wMat, tWm, sizeof(float) * wMatSizeTot, cudaMemcpyHostToDevice);
 	cudaMemcpy(bMat, tBm, sizeof(float) * bMatSizeTot, cudaMemcpyHostToDevice);
+	free(tWm);
+	free(tBm);
 }
-void FullyConnected::setWMat(float* o) {
+
+void FullyConnected::end() {
+	blas.close();
 	cudaFree(wMat);
-	cudaMalloc(&wMat, sizeof(float) * 12);
-	cudaMemcpy(wMat, o, sizeof(float) * 12, cudaMemcpyHostToDevice);
-}
-void FullyConnected::setBMat(float* o) {
 	cudaFree(bMat);
-	cudaMalloc(&bMat, sizeof(float) * 5);
-	cudaMemcpy(bMat, o, sizeof(float) * 5, cudaMemcpyHostToDevice);
+	free(layers);
 }
 
+float* FullyConnected::getwMatAtIndex(int i) {
+	//returns a pointer to where wMat[i] begins
+	int wMOffset = 0;
+	for (int j = 0; j < i; j++) {
+		wMOffset += layers[j] * layers[j + 1];
+	}
+	return (wMat + wMOffset);
+}
+int* FullyConnected::getwMatDimsAtIndex(int i) {
+	//returns the dimensions of wMat[i] in {row,column} format
+	return new int[2]{layers[i + 1],layers[i]};
 
+}
+float* FullyConnected::getbMatAtIndex(int i) {
+	int bMOffset = 0;
+	for (int j = 0; j < i; j++) {
+		bMOffset += layers[j + 1];
+	}
+	return (bMat + bMOffset);
 
-
-
-
-
-
-
+}
+int* FullyConnected::getbMatDimsAtIndex(int i) {
+	return new int[2] {layers[i + 1], 1};
+}
+float* FullyConnected::getnVecAtIndex(int i, float* nodeVec) {
+	int nMOffset = 0;
+	for (int j = 0; j < i; j++) {
+		nMOffset += layers[j + 1];
+	}
+	return (nodeVec + nMOffset);
+}
+int* FullyConnected::getnVecDimsAtIndex(int i) {
+	return new int[2] {layers[i + 1],1};
+}
+float* FullyConnected::getaVecAtIndex(int i, float* activationVec) {
+	int aMOffset = 0;
+	for (int j = 0; j < i; j++) {
+		aMOffset += layers[j + 1];
+	}
+	return (activationVec + aMOffset);
+}
+int* FullyConnected::getaVecDimsAtIndex(int i) {
+	return new int[2] {layers[i + 1], 1};
+}
+float* FullyConnected::geteVecAtIndex(int i, float* errorVec) {
+	int eMOffset = 0;
+	for (int j = 0; j < i; j++) {
+		eMOffset += layers[j + 1];
+	}
+	return (errorVec + eMOffset);
+}
+int* FullyConnected::geteVecDimsAtIndex(int i) {
+	return new int[2] {layers[i + 1], 1};
+}
 
 float* FullyConnected::feedForward(const float* x) {
+	float* xG;
+	cudaMalloc(&xG, sizeof(float) * layers[0]);
+	cudaMemcpy(xG, x, sizeof(float) * layers[0], cudaMemcpyHostToDevice); //xG is now in GPU memory
+	for (int i = 0; i < layerNum - 1; i++) {
+		float* tempComp;
+		float* tempCompFP2;
+		cudaMalloc(&tempComp, sizeof(float) * layers[i + 1]);
+		cudaMalloc(&tempCompFP2, sizeof(float) * getwMatDimsAtIndex(i)[0] * 1);
+		blas.gemmStandardFromGPUMem(getwMatAtIndex(i), xG, tempCompFP2, getwMatDimsAtIndex(i)[0], getwMatDimsAtIndex(i)[1], 1);
+		definedGPUFunctions::addMatCWiseGPUMem(tempCompFP2, getbMatAtIndex(i), tempComp, layers[i + 1]);
+		cudaFree(xG);
+		cudaMalloc(&xG, sizeof(float) * layers[i + 1]);
+		definedGPUFunctions::sigmoidMatCWiseGPUMem(tempComp, xG, layers[i + 1]);
+	}
+	float* y = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
+	cudaMemcpy(y, xG, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
+	return y;
+}
+void FullyConnected::backProp(const float* x, const float* y) {
+	//initializing memory and variables
+	float* xG;
+	float* yG;
+	cudaMalloc(&xG, sizeof(float) * layers[0]);
+	cudaMalloc(&yG, sizeof(float) * layers[layerNum - 1]);
+	cudaMemcpy(xG, x, sizeof(float) * layers[0], cudaMemcpyHostToDevice); //x is now in GPU memory as xG
+	cudaMemcpy(yG, y, sizeof(float) * layers[layerNum - 1], cudaMemcpyHostToDevice); //y is now in GPU memory as yG
+	float* xGOriginal; //hosts an unmodified copy of xG, since xG is modified during the forward pass
+	cudaMalloc(&xGOriginal, sizeof(float) * layers[0]);
+	cudaMemcpy(xGOriginal, xG, sizeof(float) * layers[0], cudaMemcpyDeviceToDevice); 
+	float* nodes;
+	float* activations;
+	float* layerError;
+	int lTot = 0;
+	for (int i = 0; i < layerNum-1; i++) {
+		lTot += layers[i+1];
+	}
+	cudaMalloc(&nodes, sizeof(float) * lTot);
+	cudaMalloc(&activations, sizeof(float) * lTot);
+	cudaMalloc(&layerError, sizeof(float) * lTot);
+	//forward pass
+	for (int i = 0; i < layerNum - 1; i++) {
+		float* tempCompFP1;
+		float* tempCompFP2;
+		cudaMalloc(&tempCompFP1, sizeof(float) * layers[i + 1]);
+		cudaMalloc(&tempCompFP2, sizeof(float) * getwMatDimsAtIndex(i)[0] * 1);
+
+		//tempCompFP2 = blas.gemmStandardFromGPUMemRet(getwMatAtIndex(i), xG, getwMatDimsAtIndex(i)[0], getwMatDimsAtIndex(i)[1], 1);
+		blas.gemmStandardFromGPUMem(getwMatAtIndex(i), xG,tempCompFP2,getwMatDimsAtIndex(i)[0], getwMatDimsAtIndex(i)[1], 1);
+		
+		definedGPUFunctions::addMatCWiseGPUMem(tempCompFP2, getbMatAtIndex(i), tempCompFP1, layers[i + 1]);
+		cudaMemcpy(getnVecAtIndex(i,nodes), tempCompFP1, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaFree(xG);
+		cudaMalloc(&xG, sizeof(float) * layers[i + 1]);
+		definedGPUFunctions::sigmoidMatCWiseGPUMem(tempCompFP1, xG, layers[i + 1]);
+		cudaMemcpy(getaVecAtIndex(i, activations), xG, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaFree(tempCompFP1);
+		cudaFree(tempCompFP2);
+	}
+	cudaFree(xG);
+	//calculate output error
+	float* tempCompOE1;
+	float* tempCompOE2;
+	cudaMalloc(&tempCompOE1, sizeof(float) * layers[layerNum - 1]);
+	cudaMalloc(&tempCompOE2, sizeof(float) * layers[layerNum - 1]);
+	definedGPUFunctions::subMatCWiseGPUMem(getaVecAtIndex(layerNum-2,activations), yG, tempCompOE1, layers[layerNum - 1]);
+	definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
+	definedGPUFunctions::multCompCWiseGPUMem(tempCompOE1, tempCompOE2, geteVecAtIndex(layerNum - 2, layerError), layers[layerNum - 1]);
+	cudaFree(tempCompOE1);
+	cudaFree(tempCompOE2);
+	//backward pass
+	for (int i = layerNum - 3; i >= 0; i--) {
+		float* tempCompBP1;
+		float* tempCompBP2;
+		int* wMatDims = getwMatDimsAtIndex(i + 1);
+		cudaMalloc(&tempCompBP1, sizeof(float) * wMatDims[1]);
+		cudaMalloc(&tempCompBP2, sizeof(float) * wMatDims[1]);
+		
+		//tempCompBP1 = blas.gemmStandardTransposeAFromGPUMemRet(getwMatAtIndex(i + 1), geteVecAtIndex(i + 1, layerError),wMatDims[1],wMatDims[0],1);
+		blas.gemmStandardTransposeAFromGPUMem(getwMatAtIndex(i + 1), geteVecAtIndex(i + 1, layerError), tempCompBP1, wMatDims[1], wMatDims[0], 1);
+		
+		definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(i,nodes), tempCompBP2, wMatDims[1]);
+		definedGPUFunctions::multCompCWiseGPUMem(tempCompBP1, tempCompBP2, geteVecAtIndex(i,layerError), wMatDims[1]);
+		free(wMatDims);
+		cudaFree(tempCompBP1);
+		cudaFree(tempCompBP2);
+	}
+	//perform gradient descent
+	for (int i = 0; i < layerNum - 1; i++) {
+		float* tempCompGD1;
+		float* tempCompGD2;
+		int* wMatDims = getwMatDimsAtIndex(i);
+		cudaMalloc(&tempCompGD1, sizeof(float) * wMatDims[0] * wMatDims[1]);
+		cudaMalloc(&tempCompGD2, sizeof(float) * wMatDims[0] * wMatDims[1]);
+		if (i == 0) {
+			//tempCompGD1 = blas.gemmStandardTransposeBFromGPUMemRet(geteVecAtIndex(i, layerError), xGOriginal, wMatDims[0], 1, wMatDims[1]);
+			blas.gemmStandardTransposeBFromGPUMem(geteVecAtIndex(i, layerError), xGOriginal, tempCompGD1, wMatDims[0], 1, wMatDims[1]);
+		} else {
+			//tempCompGD1 = blas.gemmStandardTransposeBFromGPUMemRet(geteVecAtIndex(i, layerError), getaVecAtIndex(i-1,activations), wMatDims[0], 1, wMatDims[1]);
+			blas.gemmStandardTransposeBFromGPUMem(geteVecAtIndex(i, layerError), getaVecAtIndex(i - 1, activations), tempCompGD1, wMatDims[0], 1, wMatDims[1]);
+		}
+		definedGPUFunctions::multCompCWiseGPUMemScalar(tempCompGD1, lRate, tempCompGD2, wMatDims[0] * wMatDims[1]);
+		definedGPUFunctions::subMatCWiseGPUMem(getwMatAtIndex(i), tempCompGD2, getwMatAtIndex(i), wMatDims[0] * wMatDims[1]);
+		cudaFree(tempCompGD1);
+		cudaFree(tempCompGD2);
+		float* tempCompGD3;
+		int* bMatDims = getbMatDimsAtIndex(i);
+		cudaMalloc(&tempCompGD3, sizeof(float) * bMatDims[0]);
+		definedGPUFunctions::multCompCWiseGPUMemScalar(geteVecAtIndex(i, layerError), lRate, tempCompGD3, bMatDims[0]);
+		definedGPUFunctions::subMatCWiseGPUMem(getbMatAtIndex(i), tempCompGD3, getbMatAtIndex(i), bMatDims[0]);
+		free(wMatDims);
+		free(bMatDims);
+		cudaFree(tempCompGD3);
+	}
+	cudaFree(xGOriginal);
+	cudaFree(yG);
+	cudaFree(nodes);
+	cudaFree(activations);
+	cudaFree(layerError);
+}
+
+
+
+/*
+float* FullyConnected::feedForwardOld(const float* x) {
 	//input and output are both pointers to vector on the CPU, function automatically loads and unloads data from GPU
 	float* xG;
 	cudaMalloc(&xG, sizeof(float) * layers[0]);
@@ -81,7 +252,7 @@ float* FullyConnected::feedForward(const float* x) {
 	return y;
 }
 
-void FullyConnected::backProp(const float* x, const float* y) {
+void FullyConnected::backPropOld(const float* x, const float* y) {
 	bool veryVerbose = false;
 	if (veryVerbose) {
 		std::cout << "Weight Matrix Before: " << std::endl;
@@ -235,13 +406,11 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaFree(xG);
 
 	
-	/*
 	std::cout << "Output Error=" << std::endl;
 	tCPUVal2 = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
 	cudaMemcpy(tCPUVal2, layerError + lTot - layers[layerNum - 1], sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
 	blas.print_matrix(tCPUVal2, layers[layerNum - 1], 1);
 	std::cout << std::endl;
-	*/
 
 	//backward pass
 	bool backwardVerbose = false;
@@ -263,7 +432,6 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	for (int i = 0; i < layerNum - 2; i++) {
 		wMOffset += layers[i] * layers[i + 1];
 	}
-	/*
 	if (backwardVerbose) {
 		int tRunTotal = 0;
 		std::cout << "Weight Matrix=" << std::endl;
@@ -276,7 +444,6 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		}
 		std::cout << std::endl;
 	}
-	*/
 	//std::cout << "Backward Pass" << std::endl;
 	for (int i = layerNum - 3; i >= 0; i--) {
 		float* lyrWMat; //stores wMatrixArr[i+1]
@@ -490,13 +657,11 @@ void FullyConnected::backProp(const float* x, const float* y) {
 
 	cudaMemcpy(wMat, tempComp, sizeof(float) * layers[0] * layers[1], cudaMemcpyDeviceToDevice);
 
-	/*
 	std::cout << "Layer " << 0 << " Weight Changed: " << std::endl;
 	float* tCPUVal = (float*)malloc(sizeof(float) * layers[0] * layers[1]);
 	cudaMemcpy(tCPUVal, tempComp2, sizeof(float)* layers[0] * layers[1], cudaMemcpyDeviceToHost);
 	blas.print_matrix(tCPUVal, layers[1], layers[0]);
 	std::cout << std::endl;
-	*/
 
 	cudaFree(tempComp); //stores layerError[0].mul(lRate)
 	cudaFree(tempComp2); //stores bMatrixArr[0].sub(layerError[0].mul(lRate))
@@ -547,12 +712,12 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		
 		cudaMemcpy((wMat + wMOffset), tempComp, sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToDevice);
 		
-		/*
+
 		std::cout << "Layer " << i << " Weight Changed: " << std::endl;
 		float* tCPUVal = (float*)malloc(sizeof(float) * layers[i] * layers[i + 1]);
 		cudaMemcpy(tCPUVal, tempComp2, sizeof(float) * layers[i] * layers[i + 1], cudaMemcpyDeviceToHost);
 		blas.print_matrix(tCPUVal, layers[i + 1], layers[i]);
-		std::cout << std::endl;*/
+		std::cout << std::endl;
 		
 		
 		
@@ -564,12 +729,12 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		definedGPUFunctions::subMatCWiseGPUMem(lyrBMat, tempComp, tempComp2,layers[i+1]);
 
 		
-		/*
+
 		std::cout << "Layer " << i << " Bias Changed: " << std::endl;
 		tCPUVal = (float*)malloc(sizeof(float) * layers[i + 1]);
 		cudaMemcpy(tCPUVal, tempComp2, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToHost);
 		blas.print_matrix(tCPUVal, layers[i + 1], 1);
-		std::cout << std::endl;*/
+		std::cout << std::endl;
 		
 
 		
@@ -640,6 +805,6 @@ void FullyConnected::backProp(const float* x, const float* y) {
 			std::cout << std::endl;
 		}
 	}
-	
-}
+*/	
+
 

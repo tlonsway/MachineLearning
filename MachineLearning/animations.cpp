@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <windows.h>
+
 #define goto(x,y) printf("\033[%d;%dH", (y), (x))
 void display_image(unsigned char* image, int label, int guess) {
 	goto(0, 0);
@@ -34,11 +35,7 @@ void progress_bar(float position, float end_point, std::string title) {
 	}
 	if (((int)position) % divnum == 0) {
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-		printf("\r");
-		for (int i = 0; i < 40; i++) {
-			printf(" ");
-		}
-		printf("\r");
+		printf("\r                                                  \r");
 		//goto(0,0);
 		//printf("(%s) ", title);
 		std::cout << "(" << title << ") ";
