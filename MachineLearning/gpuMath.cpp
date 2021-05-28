@@ -4,6 +4,7 @@
 #include <cublas_v2.h>
 #include <curand.h>
 #include <iostream>
+#include <random>
 #include "animations.h"
 
 using namespace gpuMath;
@@ -180,6 +181,11 @@ void blasOp::randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A) {
 void blasOp::randMatCPUMem(float* A, int m, int n) {
 	long len = (long)m * (long)n;
 	long i;
+	/*for (i=0; i < len; i += 1) {
+		*(A + i) = ((float)(rand()));
+		progress_bar(i, len, "Generating Random Values");
+	}*/
+	
 	for (i = 0; i < len % 10; i++) {
 		float num = ((float)(rand() % 200) - 100.0) / 100.0;
 		*(A + i) = num;
@@ -198,6 +204,15 @@ void blasOp::randMatCPUMem(float* A, int m, int n) {
 		progress_bar(i, len, "Generating Random Values");
 	}
 	std::cout << std::endl;
+}
+void blasOp::randMatCPUMemNormal(float* A, long len, float mean, float variance) {
+	std::default_random_engine generator;
+	std::normal_distribution<double> distribution(mean, variance);
+	for (long l = 0; l < len; l++) {
+		*(A + l) = distribution(generator);
+		progress_bar(l, len, "Generating Gaussian Random Distribution");
+	}
+
 }
 void blasOp::print_matrix(const float* A, int nr_rows_A, int nr_cols_A) {
 	for (int i = 0; i < nr_rows_A; ++i) {

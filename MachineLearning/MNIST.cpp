@@ -19,7 +19,7 @@ void delay(float number_of_seconds)
 
 
 
-int main44(int argv, char* argc[]) {
+int main(int argv, char* argc[]) {
 	const int meta_data_size = 16;
 
 	char* file_inputs;
@@ -81,9 +81,9 @@ int main44(int argv, char* argc[]) {
 	fread(label_data, 1, num_items, fp_labels);
 	fclose(fp_labels);
 	printf("\n===============================================================\n");
-	int image_num = 1000;
+	//int image_num = 1000;
 	//display_image(input_data[image_num], label_data[image_num], 0);
-	float** indata = (float**)malloc(sizeof(float*) * num_pics);
+	float** indata = (float**)malloc(sizeof(float*) * num_pics*784);
 	for (int i = 0; i < num_pics; i++) {
 		float* buffT = (float*)malloc(784 * sizeof(float));
 		for (int j = 0; j < 784; j++) {
@@ -98,7 +98,7 @@ int main44(int argv, char* argc[]) {
 	int layerNum = 3;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 784;
-	layers[1] = 32;
+	layers[1] = 128;
 	layers[2] = 10;
 	float lRate = .05;
 	layer::FullyConnected net(layers, layerNum, lRate);
@@ -107,6 +107,7 @@ int main44(int argv, char* argc[]) {
 	int numTestedCorrect = 0;
 	for (int i = 0; i < 60000; i++) {
 		float* x = indata[i];
+		//gpuMath::blasOp::print_matrix(x, 784, 1);
 		float* y = (float*)malloc(sizeof(float) * 10);
 		for (int j = 0; j < 10; j++) {
 			y[j] = 0;
@@ -122,6 +123,7 @@ int main44(int argv, char* argc[]) {
 				nGuessNum = j;
 			}
 		}
+		//gpuMath::blasOp::print_matrix(nGuess, 1, 10);
 		//if (nGuessNum == label_data[i]) {
 			//std::cout << "Correct" << std::endl;
 		//}
@@ -134,6 +136,7 @@ int main44(int argv, char* argc[]) {
 				numTestedCorrect++;
 			}
 			display_imageFloat(x, label_data[i], nGuessNum);
+			gpuMath::blasOp::print_matrix(nGuess, 1, 10);
 			if (i > 20020) {
 				std::cout << "Percent correct: " << 100 * (float)numTestedCorrect / (float)numTested << "%" << std::endl;
 			}

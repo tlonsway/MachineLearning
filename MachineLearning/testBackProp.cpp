@@ -18,16 +18,16 @@ int main() {
 
 
 
-int main() {
+void main23() {
 	
 	int layerNum = 6;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 2;
-	layers[1] = 128;
+	layers[1] = 512;
 	//layers[2] = 2;
-	layers[2] = 64;
-	layers[3] = 32;
-	layers[4] = 16;
+	layers[2] = 256;
+	layers[3] = 128;
+	layers[4] = 64;
 	layers[5] = 2;
 	float lRate = .05;
 	FullyConnected net(layers, layerNum, lRate);
@@ -56,8 +56,9 @@ int main() {
 		net.backProp(x, y);
 		progress_bar(i,totalBackprops, "Training");
 	}
+	std::cout << std::endl;
 	//test network
-	int numTest = 1000;
+	int numTest = 10000;
 	int numCorrect = 0;
 
 	for (int i = 0; i < numTest; i++) {
@@ -82,11 +83,13 @@ int main() {
 			correct = false;
 		}
 		if (correct) {
-			std::cout << "Correct" << std::endl;
+			//std::cout << "Correct" << std::endl;
 			numCorrect++;
 		} else {
-			std::cout << "Wrong" << std::endl;
+			//std::cout << "Wrong" << std::endl;
 		}
+		progress_bar(i, numTest, "Testing");
 	}
+	std::cout << std::endl;
 	std::cout << "Percent correct: " << (100 * (float)numCorrect / (float)numTest) << "%" << std::endl;
 }

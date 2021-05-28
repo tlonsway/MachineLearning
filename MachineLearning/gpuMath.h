@@ -19,6 +19,7 @@ namespace gpuMath {
 		void geamTransposeSingleGPUMem(float* A, float* B, int m, int n);
 		static void randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A);
 		static void randMatCPUMem(float* A, int m, int n);
+		static void randMatCPUMemNormal(float* A, long len, float mean, float variance);
 		static void print_matrix(const float* A, int nr_rows_A, int nr_cols_A);
 		void close();
 	};
