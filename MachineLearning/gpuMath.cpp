@@ -169,7 +169,7 @@ void blasOp::geamTransposeSingleGPUMem(float* A, float* B, int m, int n) {
 	float* alphaP = &alpha;
 	float* betaP = &beta;
 	//cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, alphaP, A, n, betaP, B, m, B, m);
-	cublasSgeam(handle, CUBLAS_OP_N, CUBLAS_OP_T, m, n, alphaP, A, n, betaP, B, m, B, m);
+	cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, n, m, alphaP, A, m, betaP, B, n, B, n);
 }
 
 void blasOp::randMatGPUMem(float* A, int nr_rows_A, int nr_cols_A) {

@@ -87,7 +87,13 @@ int main(int argv, char* argc[]) {
 	for (int i = 0; i < num_pics; i++) {
 		float* buffT = (float*)malloc(784 * sizeof(float));
 		for (int j = 0; j < 784; j++) {
-			buffT[j] = (float)input_data[i][j] / 255;
+			if (input_data[i][j] > 50) {
+				buffT[j] = 1.0;
+			}
+			else {
+				buffT[j] = 0.0;
+			}
+			//buffT[j] = (float)input_data[i][j] / 255;
 		}
 		//display_imageFloat(buffT, 0, 0);
 		indata[i] = buffT;
@@ -95,18 +101,22 @@ int main(int argv, char* argc[]) {
 
 
 	//NEURAL NETWORK CODE HERE
-	int layerNum = 3;
+	int layerNum = 4;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 784;
 	layers[1] = 128;
-	layers[2] = 10;
-	float lRate = .05;
+	layers[2] = 32;
+	layers[3] = 10;
+	float lRate = .5;
 	layer::FullyConnected net(layers, layerNum, lRate);
-
+	 
 	int numTested = 0;
 	int numTestedCorrect = 0;
 	for (int i = 0; i < 60000; i++) {
 		float* x = indata[i];
+		//if (i > 6000) {
+		//	display_imageFloat(x, label_data[i], -1);
+		//}
 		//gpuMath::blasOp::print_matrix(x, 784, 1);
 		float* y = (float*)malloc(sizeof(float) * 10);
 		for (int j = 0; j < 10; j++) {
@@ -114,6 +124,7 @@ int main(int argv, char* argc[]) {
 		}
 		y[label_data[i]] = 1;
 		float* nGuess = (float*)malloc(sizeof(float) * 10);
+		net.backProp(x, y);
 		nGuess = net.feedForward(x);
 		int nGuessNum = 0;
 		float runMax = -10;
@@ -130,21 +141,22 @@ int main(int argv, char* argc[]) {
 		//else {
 		//	std::cout << "Wrong" << std::endl;
 		//}
-		if (i > 20000) {
+		if (i > 55000) {
 			numTested++;
 			if (nGuessNum == label_data[i]) {
 				numTestedCorrect++;
 			}
 			display_imageFloat(x, label_data[i], nGuessNum);
-			gpuMath::blasOp::print_matrix(nGuess, 1, 10);
-			if (i > 20020) {
+			//gpuMath::blasOp::print_matrix(y, 1, 10);
+			//gpuMath::blasOp::print_matrix(nGuess, 1, 10);
+			if (i > 20050) {
 				std::cout << "Percent correct: " << 100 * (float)numTestedCorrect / (float)numTested << "%" << std::endl;
 			}
 			delay(0.5);
 		}
 		//gpuMath::blasOp::print_matrix(x, 1, 784);
 		progress_bar(i, 60000, "Training");
-		net.backProp(x, y);
+		
 		free(input_data[i]);
 	}
 	std::cout << std::endl;

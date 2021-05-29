@@ -5,35 +5,48 @@
 
 using namespace layer;
 
-/*
-int main() {
+
+/*int main() {
 	gpuMath::blasOp blas;
-	float in1[8] = { 1,2,3,4,5,6,7,8 };
-	float in2[6] = { 1,2,3,4,5,6 };
+	float in1[8] = { 0,0,0,0,5,6,7,8 }; //2x4
+	float in2[6] = { 1,2,3,4,5,6 }; //2x3
 	float* out = (float*)malloc(sizeof(float) * 4 * 3);
-	blas.gemmStandardFromCPUMem(in1, in2, out, 4, 2, 3);
+	//blas.gemmStandardFromCPUMem(in1, in2, out, 4, 2, 3);
+	float* in1G;
+	float* in2G;
+	float* outG;
+	cudaMalloc(&in1G, sizeof(float) * 8);
+	cudaMalloc(&in2G, sizeof(float) * 6);
+	cudaMalloc(&outG, sizeof(float) * 4 * 3);
+	cudaMemcpy(in1G, in1, sizeof(float) * 8, cudaMemcpyHostToDevice);
+	cudaMemcpy(in2G, in2, sizeof(float) * 6, cudaMemcpyHostToDevice);
+	//blas.gemmStandardFromGPUMem(in1G, in2G, outG, 4, 2, 3);
+	//blas.gemmStandardTransposeAFromGPUMem(in1G, in2G, outG, 4, 2, 3);
+	blas.gemmStandardTransposeBFromGPUMem(in1G, in2G, outG, 4, 2, 3);
+	cudaMemcpy(out, outG, sizeof(float) * 4 * 3, cudaMemcpyDeviceToHost);
 	gpuMath::blasOp::print_matrix(out,4,3);
-}
-*/
+}*/
 
 
 
-void main23() {
+
+void main982347() {
+
+
+
 	
-	int layerNum = 6;
+	int layerNum = 4;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 2;
-	layers[1] = 512;
+	layers[1] = 256;
 	//layers[2] = 2;
-	layers[2] = 256;
-	layers[3] = 128;
-	layers[4] = 64;
-	layers[5] = 2;
-	float lRate = .05;
+	layers[2] = 64;
+	layers[3] = 2;
+	float lRate = .5;
 	FullyConnected net(layers, layerNum, lRate);
 	
 	//train network
-	int totalBackprops = 20000;
+	int totalBackprops = 50000;
 	for (int i = 0; i < totalBackprops; i++) {
 		float* x = (float*)malloc(sizeof(float) * 2);
 		float* y = (float*)malloc(sizeof(float) * 2);
