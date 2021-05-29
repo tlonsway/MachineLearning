@@ -101,12 +101,13 @@ int main(int argv, char* argc[]) {
 
 
 	//NEURAL NETWORK CODE HERE
-	int layerNum = 4;
+	int layerNum = 5;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 784;
-	layers[1] = 128;
-	layers[2] = 32;
-	layers[3] = 10;
+	layers[1] = 2048;
+	layers[2] = 1024;
+	layers[3] = 128;
+	layers[4] = 10;
 	float lRate = .5;
 	layer::FullyConnected net(layers, layerNum, lRate);
 	 

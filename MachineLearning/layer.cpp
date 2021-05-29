@@ -174,8 +174,6 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaMalloc(&layerError, sizeof(float) * lTot);
 	//forward pass
 	for (int i = 0; i < layerNum - 1; i++) {
-		//printGPUMat(getwMatAtIndex(i), getwMatDimsAtIndex(i)[0], getwMatDimsAtIndex(i)[1]);
-		//printGPUMat(getbMatAtIndex(i), getbMatDimsAtIndex(i)[0], getbMatDimsAtIndex(i)[1]);
 		float* tempCompFP1;
 		float* tempCompFP2;
 		cudaMalloc(&tempCompFP1, sizeof(float) * layers[i + 1]);
@@ -199,19 +197,6 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	definedGPUFunctions::subMatCWiseGPUMem(getaVecAtIndex(layerNum-2,activations), yG, tempCompOE1, layers[layerNum - 1]);
 	definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
 	definedGPUFunctions::multCompCWiseGPUMem(tempCompOE1, tempCompOE2, geteVecAtIndex(layerNum - 2, layerError), layers[layerNum - 1]);
-
-	//std::cout << "Output Nodes";
-	//printGPUMat(getnVecAtIndex(layerNum - 2, nodes), getnVecDimsAtIndex(layerNum - 2)[0], getnVecDimsAtIndex(layerNum - 2)[1]);
-	//std::cout << std::endl;
-	
-	//std::cout << "Output Activations";
-	//printGPUMat(getaVecAtIndex(layerNum - 2, activations), getaVecDimsAtIndex(layerNum - 2)[0], getaVecDimsAtIndex(layerNum - 2)[1]);
-	//std::cout << std::endl;
-	//std::cout << "Output Error";
-	//printGPUMat(geteVecAtIndex(layerNum - 2, layerError), geteVecDimsAtIndex(layerNum - 2)[0], geteVecDimsAtIndex(layerNum - 2)[1]);
-	//std::cout << std::endl;
-
-
 	cudaFree(tempCompOE1);
 	cudaFree(tempCompOE2);
 	//backward pass
