@@ -42,9 +42,6 @@ FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
 	if (layerNum >= 5) {
 		pBar1.close();
 	}
-	//gpuMath::blasOp::randMatCPUMemNormal(tWm,wMatSizeTot,0,
-	//gpuMath::blasOp::randMatCPUMem(tWm, wMatSizeTot, 1);
-	//gpuMath::blasOp::randMatCPUMem(tBm, bMatSizeTot, 1);
 	for (int i = 0; i < bMatSizeTot; i++) {
 		tBm[i] = 0;
 	}
