@@ -23,10 +23,10 @@ string getTimeStringFromMillis(long m) {
 }
 
 void ProgressBar::display(float position, float end_point, std::string title) {
-	int divnum = (int)(end_point / 1000.0);
-	if (divnum == 0) {
-		divnum = 1;
-	}
+	//int divnum = (int)(end_point / 1000.0);
+	//if (divnum == 0) {
+	//	divnum = 1;
+	//}
 	
 	//if (((int)position) % divnum == 0 && clock()-lastTime >= 500) {
 	if (clock() - lastTime >= 500) {

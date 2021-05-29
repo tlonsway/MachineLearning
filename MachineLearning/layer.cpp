@@ -30,17 +30,10 @@ FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
 	//Xavier initialization for weights
 	long wMatOffset = 0;
 	vbOut("Using Xavier initialization to set initial weights");
-	ProgressBar pBar1;
 	for (int i = 0; i < layerNum - 1; i++) {
 		float stdev = sqrt(1/(float)layers[i]);
 		gpuMath::blasOp::randMatCPUMemNormal(tWm + wMatOffset, layers[i] * layers[i + 1], 0,stdev);
 		wMatOffset += layers[i] * layers[i + 1];
-		if (layerNum >= 5) {
-			pBar1.display(i, layerNum - 1, "Initializing weights with Gaussian distribution");
-		}
-	}
-	if (layerNum >= 5) {
-		pBar1.close();
 	}
 	for (int i = 0; i < bMatSizeTot; i++) {
 		tBm[i] = 0;
