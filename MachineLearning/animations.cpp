@@ -28,6 +28,20 @@ void display_image(unsigned char* image, int label, int guess) {
 	printf("Network guess: %d\n", guess);
 }
 
+void title_block(std::string title) {
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole, 15 + (16 * 9));
+	int toplen = title.size();
+	std::string bar = "";
+	for (int i = 0; i < toplen; i++) {
+		bar = bar + "-";
+	}
+	std::cout << "/" << bar << "\\" << std::endl;
+	std::cout << "|" << title << "|" << std::endl;
+	std::cout << "\\" << bar << "/" << std::endl;
+	SetConsoleTextAttribute(hConsole, 15);
+}
+
 void progress_bar(float position, float end_point, std::string title) {
 	int divnum = (int)(end_point / 1000.0);
 	if (divnum == 0) {

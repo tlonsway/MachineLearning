@@ -6,6 +6,7 @@
 #include <iostream>
 #include <random>
 #include "animations.h"
+#include "ProgressBar.h"
 
 using namespace gpuMath;
 
@@ -208,11 +209,14 @@ void blasOp::randMatCPUMem(float* A, int m, int n) {
 void blasOp::randMatCPUMemNormal(float* A, long len, float mean, float variance) {
 	std::default_random_engine generator;
 	std::normal_distribution<double> distribution(mean, variance);
+	//ProgressBar pBar;
 	for (long l = 0; l < len; l++) {
 		*(A + l) = distribution(generator);
-		progress_bar(l, len, "Generating Gaussian Random Distribution");
+		//progress_bar(l, len, "Generating Gaussian Random Distribution");
+		//pBar.display(l, len, "Generating Gaussian Random Distribution");
 	}
-
+	//std::cout << std::endl;
+	//pBar.close();
 }
 void blasOp::print_matrix(const float* A, int nr_rows_A, int nr_cols_A) {
 	for (int i = 0; i < nr_rows_A; ++i) {

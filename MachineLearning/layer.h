@@ -1,5 +1,6 @@
 #pragma once
-#include "gpuMath.h";
+#include "gpuMath.h"
+#include <string>
 
 namespace layer {
 	class FullyConnected {
@@ -26,5 +27,6 @@ namespace layer {
 		int* getaVecDimsAtIndex(int i);
 		float* geteVecAtIndex(int i, float* errorVec);
 		int* geteVecDimsAtIndex(int i);
+		void vbOut(std::string s);
 	};
 }

@@ -5,10 +5,13 @@
 #include <iostream>
 #include "definedGPUFunctions.cuh"
 #include <windows.h>
+#include "ProgressBar.h"
+#include <string>
 
 using namespace layer;
 
 FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
+	vbOut("Initializing variables for fully-connected network");
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	layers = lys;
 	layerNum = lysN;
@@ -26,10 +29,18 @@ FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
 	float* tBm = (float*)malloc(sizeof(float) * bMatSizeTot);
 	//Xavier initialization for weights
 	long wMatOffset = 0;
+	vbOut("Using Xavier initialization to set initial weights");
+	ProgressBar pBar1;
 	for (int i = 0; i < layerNum - 1; i++) {
 		float stdev = sqrt(1/(float)layers[i]);
 		gpuMath::blasOp::randMatCPUMemNormal(tWm + wMatOffset, layers[i] * layers[i + 1], 0,stdev);
 		wMatOffset += layers[i] * layers[i + 1];
+		if (layerNum >= 5) {
+			pBar1.display(i, layerNum - 1, "Initializing weights with Gaussian distribution");
+		}
+	}
+	if (layerNum >= 5) {
+		pBar1.close();
 	}
 	//gpuMath::blasOp::randMatCPUMemNormal(tWm,wMatSizeTot,0,
 	//gpuMath::blasOp::randMatCPUMem(tWm, wMatSizeTot, 1);
@@ -37,11 +48,22 @@ FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
 	for (int i = 0; i < bMatSizeTot; i++) {
 		tBm[i] = 0;
 	}
+	vbOut("Setting up initial GPU memory");
 	cudaMemcpy(wMat, tWm, sizeof(float) * wMatSizeTot, cudaMemcpyHostToDevice);
 	cudaMemcpy(bMat, tBm, sizeof(float) * bMatSizeTot, cudaMemcpyHostToDevice);
 	free(tWm);
 	free(tBm);
 }
+
+void FullyConnected::vbOut(std::string s) {
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	std::string vBStr = "[FCNET]: ";
+	vBStr = vBStr + s;
+	SetConsoleTextAttribute(hConsole, 10);
+	std::cout << vBStr << std::endl;
+	SetConsoleTextAttribute(hConsole, 15);
+}
+
 
 void FullyConnected::end() {
 	blas.close();

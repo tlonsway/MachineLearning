@@ -6,6 +6,7 @@
 #include "layer.h"
 #include <time.h>
 #include "animations.h"
+#include "ProgressBar.h";
 
 #define clear() printf("\033[H\033[J")
 #define goto(x,y) printf("\033[%d;%dH", (y), (x))
@@ -20,6 +21,7 @@ void delay(float number_of_seconds)
 
 
 int main(int argv, char* argc[]) {
+	title_block("MNIST Digit Categorization");
 	const int meta_data_size = 16;
 
 	char* file_inputs;
@@ -93,6 +95,7 @@ int main(int argv, char* argc[]) {
 			else {
 				buffT[j] = 0.0;
 			}
+			//buffT[j] = input_data[i][j];
 			//buffT[j] = (float)input_data[i][j] / 255;
 		}
 		//display_imageFloat(buffT, 0, 0);
@@ -104,37 +107,37 @@ int main(int argv, char* argc[]) {
 	int layerNum = 5;
 	int* layers = (int*)malloc(sizeof(int) * layerNum);
 	layers[0] = 784;
-	layers[1] = 2048;
-	layers[2] = 1024;
-	layers[3] = 128;
+	layers[1] = 512;
+	layers[2] = 256;
+	layers[3] = 32;
 	layers[4] = 10;
 	float lRate = .5;
 	layer::FullyConnected net(layers, layerNum, lRate);
 	 
+	
+
+
 	int numTested = 0;
 	int numTestedCorrect = 0;
+	ProgressBar pBar;
 	for (int i = 0; i < 60000; i++) {
 		float* x = indata[i];
-		//if (i > 6000) {
-		//	display_imageFloat(x, label_data[i], -1);
-		//}
-		//gpuMath::blasOp::print_matrix(x, 784, 1);
 		float* y = (float*)malloc(sizeof(float) * 10);
 		for (int j = 0; j < 10; j++) {
 			y[j] = 0;
 		}
 		y[label_data[i]] = 1;
-		float* nGuess = (float*)malloc(sizeof(float) * 10);
+		//float* nGuess = (float*)malloc(sizeof(float) * 10);
+		//nGuess = net.feedForward(x);
 		net.backProp(x, y);
-		nGuess = net.feedForward(x);
-		int nGuessNum = 0;
-		float runMax = -10;
-		for (int j = 0; j < 10; j++) {
-			if (nGuess[j] > runMax) {
-				runMax = nGuess[j];
-				nGuessNum = j;
-			}
-		}
+		//int nGuessNum = 0;
+		//float runMax = -10;
+		//for (int j = 0; j < 10; j++) {
+		//	if (nGuess[j] > runMax) {
+	    //		runMax = nGuess[j];
+		//		nGuessNum = j;
+		//	}
+		//}
 		//gpuMath::blasOp::print_matrix(nGuess, 1, 10);
 		//if (nGuessNum == label_data[i]) {
 			//std::cout << "Correct" << std::endl;
@@ -142,7 +145,7 @@ int main(int argv, char* argc[]) {
 		//else {
 		//	std::cout << "Wrong" << std::endl;
 		//}
-		if (i > 55000) {
+		/*if (i > 55000) {
 			numTested++;
 			if (nGuessNum == label_data[i]) {
 				numTestedCorrect++;
@@ -154,13 +157,14 @@ int main(int argv, char* argc[]) {
 				std::cout << "Percent correct: " << 100 * (float)numTestedCorrect / (float)numTested << "%" << std::endl;
 			}
 			delay(0.5);
-		}
+		}*/
 		//gpuMath::blasOp::print_matrix(x, 1, 784);
-		progress_bar(i, 60000, "Training");
-		
+		//progress_bar(i, 60000, "Training");
+		pBar.display(i, 60000, "Training");
 		free(input_data[i]);
 	}
-	std::cout << std::endl;
+	pBar.close();
+	//std::cout << std::endl;
 	free(input_data);
 	free(label_data);
 	printf("Training complete.\n");
@@ -212,8 +216,26 @@ int main(int argv, char* argc[]) {
 	fclose(fp_test_labels);
 
 	clear();
+
+	indata = (float**)malloc(sizeof(float*) * num_pics * 784);
 	for (int i = 0; i < num_pics; i++) {
-		float* out = net.feedForward((float*)test_images[i]);
+		float* buffT = (float*)malloc(784 * sizeof(float));
+		for (int j = 0; j < 784; j++) {
+			if (test_images[i][j] > 50) {
+				buffT[j] = 1.0;
+			}
+			else {
+				buffT[j] = 0.0;
+			}
+			//buffT[j] = input_data[i][j];
+			//buffT[j] = (float)input_data[i][j] / 255;
+		}
+		//display_imageFloat(buffT, 0, 0);
+		indata[i] = buffT;
+	}
+
+	for (int i = 0; i < num_pics; i++) {
+		float* out = net.feedForward(indata[i]);
 		int guess = 0;
 		float runMax = -10;
 		for (int i = 0; i < 10; i++) {
