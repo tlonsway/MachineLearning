@@ -5,28 +5,56 @@
 #include "definedGPUFunctions.cuh";
 #include "gpuMath.h";
 
-__device__ __forceinline__ float sigmoid(float x) {
+__device__ __forceinline__ float sigmoidG(float x) {
     return 1.0 / (1.0 + exp(-x));
 }
 
-__device__ __forceinline__ float sigmoidPrime(float x) {
-    float temp = sigmoid(x);
+__device__ __forceinline__ float sigmoidPrimeG(float x) {
+    float temp = sigmoidG(x);
     return temp * (1 - temp);
 }
 
-__global__ void sigmoid_kernel(const float* __restrict__ src, float* __restrict__ dst, int len) {
+__global__ void sigmoid_kernelG(const float* __restrict__ src, float* __restrict__ dst, int len) {
     int stride = gridDim.x * blockDim.x;
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     for (int i = tid; i < len; i += stride) {
-        dst[i] = sigmoid(src[i]);
+        dst[i] = sigmoidG(src[i]);
     }
 }
 
-__global__ void sigmoidPrime_kernel(const float* __restrict src, float* __restrict__ dst, int len) {
+__global__ void sigmoidPrime_kernelG(const float* __restrict src, float* __restrict__ dst, int len) {
     int stride = gridDim.x * blockDim.x;
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     for (int i = tid; i < len; i += stride) {
-        dst[i] = sigmoidPrime(src[i]);
+        dst[i] = sigmoidPrimeG(src[i]);
+    }
+}
+
+__global__ void reLu_kernelG(const float* __restrict__ src, float* __restrict__ dst, int len) {
+    int stride = gridDim.x * blockDim.x;
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    for (int i = tid; i < len; i += stride) {
+        float tV = src[i];
+        if (tV > 0) {
+            dst[i] = tV;
+        }
+        else {
+            dst[i] = 0;
+        }
+    }
+}
+
+__global__ void reLuPrime_kernelG(const float* __restrict__ src, float* __restrict__ dst, int len) {
+    int stride = gridDim.x * blockDim.x;
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    for (int i = tid; i < len; i += stride) {
+        float tV = src[i];
+        if (tV > 0) {
+            dst[i] = 1;
+        }
+        else {
+            dst[i] = 0;
+        }
     }
 }
 
@@ -69,7 +97,6 @@ void definedGPUFunctions::addMatCWiseGPUMem(float *a, float *b, float *c, int le
     dim3 dimGrid(threadBlocks);
     addKernel<<<dimGrid, dimBlock >>>(a, b, c,len);
 }
-
 void definedGPUFunctions::subMatCWiseGPUMem(float *a, float *b, float *c, int len) {
     dim3 dimBlock(256);
     int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
@@ -77,7 +104,6 @@ void definedGPUFunctions::subMatCWiseGPUMem(float *a, float *b, float *c, int le
     dim3 dimGrid(threadBlocks);
     subKernel<<<dimGrid, dimBlock >>>(a, b, c,len);
 }
-
 void definedGPUFunctions::multCompCWiseGPUMem(float *a, float *b, float *c, int len) {
     dim3 dimBlock(256);
     int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
@@ -85,7 +111,6 @@ void definedGPUFunctions::multCompCWiseGPUMem(float *a, float *b, float *c, int 
     dim3 dimGrid(threadBlocks);
     multCompKernel<<<dimGrid, dimBlock >>>(a, b, c,len);
 }
-
 void definedGPUFunctions::multCompCWiseGPUMemScalar(float* a, float f, float* c, int len) {
     dim3 dimBlock(256);
     int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
@@ -93,21 +118,35 @@ void definedGPUFunctions::multCompCWiseGPUMemScalar(float* a, float f, float* c,
     dim3 dimGrid(threadBlocks);
     multScalarCompKernel<<<dimGrid, dimBlock >>>(a, f, c,len);
 }
-
 void definedGPUFunctions::sigmoidMatCWiseGPUMem(float* A, float* B, int len) {
     dim3 dimBlock(256);
     int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
     if (threadBlocks > 65520) threadBlocks = 65520;
     dim3 dimGrid(threadBlocks);
-    sigmoid_kernel<<<dimGrid, dimBlock>>>(A, B, len);
+    sigmoid_kernelG<<<dimGrid, dimBlock>>>(A, B, len);
 }
-
 void definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(float* A, float* B, int len) {
     dim3 dimBlock(256);
     int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
     if (threadBlocks > 65520) threadBlocks = 65520;
     dim3 dimGrid(threadBlocks);
-    sigmoidPrime_kernel<<<dimGrid, dimBlock>>>(A, B, len);
+    sigmoidPrime_kernelG<<<dimGrid, dimBlock>>>(A, B, len);
+}
+
+void definedGPUFunctions::reLuMatCWiseGPUMem(float* A, float* B, int len) {
+    dim3 dimBlock(256);
+    int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
+    if (threadBlocks > 65520) threadBlocks = 65520;
+    dim3 dimGrid(threadBlocks);
+    reLu_kernelG << <dimGrid, dimBlock >> > (A, B, len);
+}
+
+void definedGPUFunctions::reLuPrimeMatCWiseGPUMem(float* A, float* B, int len) {
+    dim3 dimBlock(256);
+    int threadBlocks = (len + (dimBlock.x - 1)) / dimBlock.x;
+    if (threadBlocks > 65520) threadBlocks = 65520;
+    dim3 dimGrid(threadBlocks);
+    reLuPrime_kernelG << <dimGrid, dimBlock >> > (A, B, len);
 }
 
 /*

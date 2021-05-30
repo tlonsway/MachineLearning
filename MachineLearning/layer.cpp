@@ -10,12 +10,21 @@
 
 using namespace layer;
 
-FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
-	vbOut("Initializing variables for fully-connected network");
+FullyConnected::FullyConnected(int* lys, int lysN, float lr, ActivationFunction *activationFunction) {
+	std::string initStr = "Initializing Fully-Connected Network: [Nodes(";
+	for (int i = 0; i < lysN; i++) {
+		initStr = initStr + std::to_string(lys[i]);
+		if (i != lysN - 1) {
+			initStr = initStr + ":";
+		}
+	}
+	initStr = initStr + "),lRate(" + std::to_string(lr) + "),af(" + activationFunction->getName()+ ")]";
+	vbOut(initStr);
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	layers = lys;
 	layerNum = lysN;
 	lRate = lr;
+	af = activationFunction;
 	long wMatSizeTot = 0;
 	long bMatSizeTot = 0;
 	gpuMath::blasOp blas();
@@ -38,11 +47,12 @@ FullyConnected::FullyConnected(int* lys, int lysN, float lr) {
 	for (int i = 0; i < bMatSizeTot; i++) {
 		tBm[i] = 0;
 	}
-	vbOut("Setting up initial GPU memory");
+	vbOut("Transferring intial matrices from CPU to GPU memory");
 	cudaMemcpy(wMat, tWm, sizeof(float) * wMatSizeTot, cudaMemcpyHostToDevice);
 	cudaMemcpy(bMat, tBm, sizeof(float) * bMatSizeTot, cudaMemcpyHostToDevice);
 	free(tWm);
 	free(tBm);
+	vbOut("Finished initializing network");
 }
 
 void FullyConnected::vbOut(std::string s) {
@@ -53,7 +63,6 @@ void FullyConnected::vbOut(std::string s) {
 	std::cout << vBStr << std::endl;
 	SetConsoleTextAttribute(hConsole, 15);
 }
-
 
 void FullyConnected::end() {
 	blas.close();
@@ -156,7 +165,9 @@ float* FullyConnected::feedForward(const float* x) {
 		definedGPUFunctions::addMatCWiseGPUMem(tempCompFP2, getbMatAtIndex(i), tempComp, layers[i + 1]);
 		cudaFree(xG);
 		cudaMalloc(&xG, sizeof(float) * layers[i + 1]);
-		definedGPUFunctions::sigmoidMatCWiseGPUMem(tempComp, xG, layers[i + 1]);
+		//definedGPUFunctions::sigmoidMatCWiseGPUMem(tempComp, xG, layers[i + 1]);
+		//definedGPUFunctions::reLuMatCWiseGPUMem(tempComp, xG, layers[i + 1]);
+		af->eval(tempComp, xG, layers[i + 1]);
 	}
 	float* y = (float*)malloc(sizeof(float) * layers[layerNum - 1]);
 	cudaMemcpy(y, xG, sizeof(float) * layers[layerNum - 1], cudaMemcpyDeviceToHost);
@@ -195,10 +206,13 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		cudaMemcpy(getnVecAtIndex(i,nodes), tempCompFP1, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
 		cudaFree(xG);
 		cudaMalloc(&xG, sizeof(float) * layers[i + 1]);
-		definedGPUFunctions::sigmoidMatCWiseGPUMem(tempCompFP1, xG, layers[i + 1]);
+		//definedGPUFunctions::sigmoidMatCWiseGPUMem(tempCompFP1, xG, layers[i + 1]);
+		//definedGPUFunctions::reLuMatCWiseGPUMem(tempCompFP1, xG, layers[i + 1]);
+		af->eval(tempCompFP1, xG, layers[i + 1]);
 		cudaMemcpy(getaVecAtIndex(i, activations), xG, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
 		cudaFree(tempCompFP1);
 		cudaFree(tempCompFP2);
+		//printGPUMat(xG, 1, layers[i + 1]);
 	}
 	cudaFree(xG);
 	//calculate output error
@@ -207,7 +221,9 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaMalloc(&tempCompOE1, sizeof(float) * layers[layerNum - 1]);
 	cudaMalloc(&tempCompOE2, sizeof(float) * layers[layerNum - 1]);
 	definedGPUFunctions::subMatCWiseGPUMem(getaVecAtIndex(layerNum-2,activations), yG, tempCompOE1, layers[layerNum - 1]);
-	definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
+	//definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
+	//definedGPUFunctions::reLuPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
+	af->evalPrime(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
 	definedGPUFunctions::multCompCWiseGPUMem(tempCompOE1, tempCompOE2, geteVecAtIndex(layerNum - 2, layerError), layers[layerNum - 1]);
 	cudaFree(tempCompOE1);
 	cudaFree(tempCompOE2);
@@ -219,7 +235,9 @@ void FullyConnected::backProp(const float* x, const float* y) {
 		cudaMalloc(&tempCompBP1, sizeof(float) * wMatDims[1]);
 		cudaMalloc(&tempCompBP2, sizeof(float) * wMatDims[1]);
 		blas.gemmStandardTransposeAFromGPUMem(getwMatAtIndex(i + 1), geteVecAtIndex(i + 1, layerError), tempCompBP1, wMatDims[1], wMatDims[0], 1);
-		definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(i,nodes), tempCompBP2, wMatDims[1]);
+		//definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(i,nodes), tempCompBP2, wMatDims[1]);
+		//definedGPUFunctions::reLuPrimeMatCWiseGPUMem(getnVecAtIndex(i, nodes), tempCompBP2, wMatDims[1]);
+		af->evalPrime(getnVecAtIndex(i, nodes), tempCompBP2, wMatDims[1]);
 		definedGPUFunctions::multCompCWiseGPUMem(tempCompBP1, tempCompBP2, geteVecAtIndex(i,layerError), wMatDims[1]);
 		free(wMatDims);
 		cudaFree(tempCompBP1);
@@ -227,7 +245,7 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	}
 	//perform gradient descent
 	for (int i = 0; i < layerNum - 1; i++) {
-		float* tempCompGD1;
+		float* tempCompGD1; 
 		float* tempCompGD2;
 		float* tempCompGD4;
 		int* wMatDims = getwMatDimsAtIndex(i);

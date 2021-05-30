@@ -104,15 +104,16 @@ int main(int argv, char* argc[]) {
 
 
 	//NEURAL NETWORK CODE HERE
-	int layerNum = 5;
-	int* layers = (int*)malloc(sizeof(int) * layerNum);
-	layers[0] = 784;
-	layers[1] = 512;
-	layers[2] = 256;
-	layers[3] = 32;
-	layers[4] = 10;
-	float lRate = .5;
-	layer::FullyConnected net(layers, layerNum, lRate);
+	//int layerNum = 3;
+	//int* layers = (int*)malloc(sizeof(int) * layerNum);
+	//layers[0] = 784;
+	//layers[1] = 32;
+	//layers[2] = 10;
+	int layerNum = 4;
+	int* layers = new int[4]{784,128,32,10};
+	float lRate = .6;
+	ActivationFunction *af = new Sigmoid();
+	layer::FullyConnected net(layers, layerNum, lRate, af);
 	 
 	
 
@@ -234,6 +235,8 @@ int main(int argv, char* argc[]) {
 		indata[i] = buffT;
 	}
 
+	int numCorrect = 0;
+	ProgressBar pBar2;
 	for (int i = 0; i < num_pics; i++) {
 		float* out = net.feedForward(indata[i]);
 		int guess = 0;
@@ -244,13 +247,21 @@ int main(int argv, char* argc[]) {
 				guess = i;
 			}
 		}
-		display_image(test_images[i], test_labels[i], guess);
-		printf("Enter 'q' to quit.\n");
-		char c = getchar();
-		if (c == 'q') {
-			break;
+		if (guess == test_labels[i]) {
+			numCorrect++;
 		}
+		pBar2.display(i, num_pics, "Testing");
+		//display_image(test_images[i], test_labels[i], guess);
+		//printf("Enter 'q' to quit.\n");
+		//char c = getchar();
+		//if (c == 'q') {
+		//	break;
+		//}
 	}
+	pBar2.close();
+	std::cout << "Network Accuracy: " << 100 * ((float)numCorrect / (float)num_pics) << "%" << std::endl;
+
+
 	//displays answers and network guess
 	//YOUR CODE HERE - display_image() can be used
 

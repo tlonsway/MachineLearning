@@ -43,7 +43,8 @@ void main982347() {
 	layers[2] = 64;
 	layers[3] = 2;
 	float lRate = .5;
-	FullyConnected net(layers, layerNum, lRate);
+	ActivationFunction* af = new Sigmoid();
+	FullyConnected net(layers, layerNum, lRate, af);
 	
 	//train network
 	int totalBackprops = 50000;

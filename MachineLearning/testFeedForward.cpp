@@ -11,13 +11,13 @@ void main233() {
 	layers[2] = 3;
 	float lRate = 0.1;
 	int layerNum = 3;
-	FullyConnected net(layers, layerNum, lRate);
+	//FullyConnected net(layers, layerNum, lRate, Sigmoid());
 	float* sampleIn = (float*)malloc(sizeof(float) * 2);
 	sampleIn[0] = 3.6;
 	sampleIn[1] = -1.7;
-	float* out = net.feedForward(sampleIn);
+	//float* out = net.feedForward(sampleIn);
 	for (int i = 0; i < layers[layerNum - 1]; i++) {
-		std::cout << out[i] << " ";
+		//std::cout << out[i] << " ";
 	}
 	std::cout << std::endl;
 }

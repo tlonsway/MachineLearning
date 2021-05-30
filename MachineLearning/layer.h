@@ -1,6 +1,7 @@
 #pragma once
 #include "gpuMath.h"
 #include <string>
+#include "ActivationFunctions.cuh";
 
 namespace layer {
 	class FullyConnected {
@@ -11,12 +12,11 @@ namespace layer {
 		int layerNum;
 		float lRate;
 		gpuMath::blasOp blas;
-		FullyConnected(int* lys, int lysN, float lr);
+		ActivationFunction *af;
+		FullyConnected(int* lys, int lysN, float lr, ActivationFunction *activationFunction);
 		void end();
 		float* feedForward(const float* x);
 		void backProp(const float* x, const float* y);
-		float* feedForwardOld(const float* x);
-		void backPropOld(const float* x, const float* y);
 		float* getwMatAtIndex(int i);
 		int* getwMatDimsAtIndex(int i);
 		float* getbMatAtIndex(int i);

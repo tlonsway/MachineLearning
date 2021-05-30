@@ -92,14 +92,14 @@
     <ClInclude Include="animations.h" />
     <ClInclude Include="gpuMath.h" />
     <ClInclude Include="definedGPUFunctions.cuh" />
-    <ClInclude Include="graphics.h" />
+    <ClInclude Include="ActivationFunctions.cuh" />
     <ClInclude Include="layer.h" />
     <ClInclude Include="MNIST.h" />
     <ClInclude Include="ProgressBar.h" />
-    <ClInclude Include="winbgim.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="definedGPUFunctions.cu" />
+    <CudaCompile Include="ActivationFunctions.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
