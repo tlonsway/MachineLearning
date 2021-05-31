@@ -109,9 +109,9 @@ int main(int argv, char* argc[]) {
 	//layers[0] = 784;
 	//layers[1] = 32;
 	//layers[2] = 10;
-	int layerNum = 5;
-	int* layers = new int[5]{784,256,128,16,10};
-	float lRate = .01;
+	int layerNum = 4;
+	int* layers = new int[4]{784,128,28,10};
+	float lRate = .015;
 	ActivationFunction *af = new ReLu();
 	layer::FullyConnected net(layers, layerNum, lRate, af);
 	 
