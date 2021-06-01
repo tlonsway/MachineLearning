@@ -17,6 +17,7 @@ namespace layer {
 		void end();
 		float* feedForward(const float* x);
 		void backProp(const float* x, const float* y);
+		void backPropGAN(const float* x, const float error);
 		float* getwMatAtIndex(int i);
 		int* getwMatDimsAtIndex(int i);
 		float* getbMatAtIndex(int i);

@@ -279,3 +279,108 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaFree(activations);
 	cudaFree(layerError);
 }
+void FullyConnected::backPropGAN(const float* x, const float error) {
+	//initializing memory and variables
+	float* xG;
+	cudaMalloc(&xG, sizeof(float) * layers[0]);
+	cudaMemcpy(xG, x, sizeof(float) * layers[0], cudaMemcpyHostToDevice); //x is now in GPU memory as xG
+	float* xGOriginal; //hosts an unmodified copy of xG, since xG is modified during the forward pass
+	cudaMalloc(&xGOriginal, sizeof(float) * layers[0]); 
+	cudaMemcpy(xGOriginal, xG, sizeof(float) * layers[0], cudaMemcpyDeviceToDevice);
+	float* errorGPU;
+	cudaMalloc(&errorGPU, sizeof(float));
+
+	float* nodes;
+	float* activations;
+	float* layerError;
+	int lTot = 0;
+	for (int i = 0; i < layerNum - 1; i++) {
+		lTot += layers[i + 1];
+	}
+	cudaMalloc(&nodes, sizeof(float) * lTot);
+	cudaMalloc(&activations, sizeof(float) * lTot);
+	cudaMalloc(&layerError, sizeof(float) * lTot);
+	//forward pass
+	for (int i = 0; i < layerNum - 1; i++) {
+		float* tempCompFP1;
+		float* tempCompFP2;
+		cudaMalloc(&tempCompFP1, sizeof(float) * layers[i + 1]);
+		cudaMalloc(&tempCompFP2, sizeof(float) * getwMatDimsAtIndex(i)[0] * 1);
+		blas.gemmStandardFromGPUMem(getwMatAtIndex(i), xG, tempCompFP2, getwMatDimsAtIndex(i)[0], getwMatDimsAtIndex(i)[1], 1);
+		definedGPUFunctions::addMatCWiseGPUMem(tempCompFP2, getbMatAtIndex(i), tempCompFP1, layers[i + 1]);
+		cudaMemcpy(getnVecAtIndex(i, nodes), tempCompFP1, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaFree(xG);
+		cudaMalloc(&xG, sizeof(float) * layers[i + 1]);
+		//definedGPUFunctions::sigmoidMatCWiseGPUMem(tempCompFP1, xG, layers[i + 1]);
+		//definedGPUFunctions::reLuMatCWiseGPUMem(tempCompFP1, xG, layers[i + 1]);
+		af->eval(tempCompFP1, xG, layers[i + 1]);
+		cudaMemcpy(getaVecAtIndex(i, activations), xG, sizeof(float) * layers[i + 1], cudaMemcpyDeviceToDevice);
+		cudaFree(tempCompFP1);
+		cudaFree(tempCompFP2);
+		//printGPUMat(xG, 1, layers[i + 1]);
+	}
+	cudaFree(xG);
+	//calculate output error
+	float* tempCompOE1;
+	float* tempCompOE2;
+	cudaMalloc(&tempCompOE1, sizeof(float) * layers[layerNum - 1]);
+	cudaMalloc(&tempCompOE2, sizeof(float) * layers[layerNum - 1]);
+	//definedGPUFunctions::subMatCWiseGPUMem(getaVecAtIndex(layerNum - 2, activations), yG, tempCompOE1, layers[layerNum - 1]);
+	//definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
+	//definedGPUFunctions::reLuPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
+	af->evalPrime(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
+	definedGPUFunctions::multCompCWiseGPUMemScalar(tempCompOE2, error, geteVecAtIndex(layerNum - 2, layerError), layers[layerNum - 1]);
+	cudaFree(tempCompOE1);
+	cudaFree(tempCompOE2);
+	//backward pass
+	for (int i = layerNum - 3; i >= 0; i--) {
+		float* tempCompBP1;
+		float* tempCompBP2;
+		int* wMatDims = getwMatDimsAtIndex(i + 1);
+		cudaMalloc(&tempCompBP1, sizeof(float) * wMatDims[1]);
+		cudaMalloc(&tempCompBP2, sizeof(float) * wMatDims[1]);
+		blas.gemmStandardTransposeAFromGPUMem(getwMatAtIndex(i + 1), geteVecAtIndex(i + 1, layerError), tempCompBP1, wMatDims[1], wMatDims[0], 1);
+		//definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(i,nodes), tempCompBP2, wMatDims[1]);
+		//definedGPUFunctions::reLuPrimeMatCWiseGPUMem(getnVecAtIndex(i, nodes), tempCompBP2, wMatDims[1]);
+		af->evalPrime(getnVecAtIndex(i, nodes), tempCompBP2, wMatDims[1]);
+		definedGPUFunctions::multCompCWiseGPUMem(tempCompBP1, tempCompBP2, geteVecAtIndex(i, layerError), wMatDims[1]);
+		free(wMatDims);
+		cudaFree(tempCompBP1);
+		cudaFree(tempCompBP2);
+	}
+	//perform gradient descent
+	for (int i = 0; i < layerNum - 1; i++) {
+		float* tempCompGD1;
+		float* tempCompGD2;
+		float* tempCompGD4;
+		int* wMatDims = getwMatDimsAtIndex(i);
+		cudaMalloc(&tempCompGD1, sizeof(float) * wMatDims[0] * wMatDims[1]);
+		cudaMalloc(&tempCompGD2, sizeof(float) * wMatDims[0] * wMatDims[1]);
+		cudaMalloc(&tempCompGD4, sizeof(float) * wMatDims[0] * wMatDims[1]);
+		if (i == 0) {
+			blas.gemmStandardTransposeBFromGPUMem(geteVecAtIndex(i, layerError), xGOriginal, tempCompGD4, wMatDims[0], 1, wMatDims[1]);
+			blas.geamTransposeSingleGPUMem(tempCompGD4, tempCompGD1, wMatDims[0], wMatDims[1]);
+		}
+		else {
+			blas.gemmStandardFromGPUMem(geteVecAtIndex(i, layerError), getaVecAtIndex(i - 1, activations), tempCompGD4, wMatDims[0], 1, wMatDims[1]);
+			blas.geamTransposeSingleGPUMem(tempCompGD4, tempCompGD1, wMatDims[0], wMatDims[1]);
+		}
+		definedGPUFunctions::multCompCWiseGPUMemScalar(tempCompGD1, lRate, tempCompGD2, wMatDims[0] * wMatDims[1]);
+		definedGPUFunctions::subMatCWiseGPUMem(getwMatAtIndex(i), tempCompGD2, getwMatAtIndex(i), wMatDims[0] * wMatDims[1]);
+		cudaFree(tempCompGD1);
+		cudaFree(tempCompGD2);
+		cudaFree(tempCompGD4);
+		float* tempCompGD3;
+		int* bMatDims = getbMatDimsAtIndex(i);
+		cudaMalloc(&tempCompGD3, sizeof(float) * bMatDims[0]);
+		definedGPUFunctions::multCompCWiseGPUMemScalar(geteVecAtIndex(i, layerError), lRate, tempCompGD3, bMatDims[0]);
+		definedGPUFunctions::subMatCWiseGPUMem(getbMatAtIndex(i), tempCompGD3, getbMatAtIndex(i), bMatDims[0]);
+		free(wMatDims);
+		free(bMatDims);
+		cudaFree(tempCompGD3);
+	}
+	cudaFree(xGOriginal);
+	cudaFree(nodes);
+	cudaFree(activations);
+	cudaFree(layerError);
+}

@@ -65,7 +65,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -85,6 +86,7 @@
     <ClCompile Include="layer.cpp" />
     <ClCompile Include="MNIST.cpp" />
     <ClCompile Include="ProgressBar.cpp" />
+    <ClCompile Include="GANTest.cpp" />
     <ClCompile Include="testBackProp.cpp" />
     <ClCompile Include="testFeedForward.cpp" />
   </ItemGroup>

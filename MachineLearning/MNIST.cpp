@@ -20,7 +20,7 @@ void delay(float number_of_seconds)
 
 
 
-int main(int argv, char* argc[]) {
+int main423(int argv, char* argc[]) {
 	title_block("MNIST Digit Categorization");
 	const int meta_data_size = 16;
 
@@ -115,8 +115,6 @@ int main(int argv, char* argc[]) {
 	ActivationFunction *af = new ReLu();
 	layer::FullyConnected net(layers, layerNum, lRate, af);
 	 
-	
-
 
 	int numTested = 0;
 	int numTestedCorrect = 0;
