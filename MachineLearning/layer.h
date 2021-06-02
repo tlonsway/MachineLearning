@@ -16,8 +16,9 @@ namespace layer {
 		FullyConnected(int* lys, int lysN, float lr, ActivationFunction *activationFunction);
 		void end();
 		float* feedForward(const float* x);
+		float* feedForwardGAN(const float* x, int genLayer);
 		void backProp(const float* x, const float* y);
-		void backPropGAN(const float* x, const float error);
+		void backPropGAN(const float* x, const float* y, int disLayer);
 		float* getwMatAtIndex(int i);
 		int* getwMatDimsAtIndex(int i);
 		float* getbMatAtIndex(int i);

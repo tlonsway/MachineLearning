@@ -174,6 +174,28 @@ float* FullyConnected::feedForward(const float* x) {
 	cudaFree(xG);
 	return y;
 }
+float* FullyConnected::feedForwardGAN(const float* x, int genLayer) {
+	float* xG;
+	cudaMalloc(&xG, sizeof(float) * layers[0]);
+	cudaMemcpy(xG, x, sizeof(float) * layers[0], cudaMemcpyHostToDevice); //xG is now in GPU memory
+	for (int i = 0; i < genLayer; i++) {
+		float* tempComp;
+		float* tempCompFP2;
+		cudaMalloc(&tempComp, sizeof(float) * layers[i + 1]);
+		cudaMalloc(&tempCompFP2, sizeof(float) * getwMatDimsAtIndex(i)[0] * 1);
+		blas.gemmStandardFromGPUMem(getwMatAtIndex(i), xG, tempCompFP2, getwMatDimsAtIndex(i)[0], getwMatDimsAtIndex(i)[1], 1);
+		definedGPUFunctions::addMatCWiseGPUMem(tempCompFP2, getbMatAtIndex(i), tempComp, layers[i + 1]);
+		cudaFree(xG);
+		cudaMalloc(&xG, sizeof(float) * layers[i + 1]);
+		//definedGPUFunctions::sigmoidMatCWiseGPUMem(tempComp, xG, layers[i + 1]);
+		//definedGPUFunctions::reLuMatCWiseGPUMem(tempComp, xG, layers[i + 1]);
+		af->eval(tempComp, xG, layers[i + 1]);
+	}
+	float* y = (float*)malloc(sizeof(float) * layers[genLayer]);
+	cudaMemcpy(y, xG, sizeof(float) * layers[genLayer], cudaMemcpyDeviceToHost);
+	cudaFree(xG);
+	return y;
+}
 void FullyConnected::backProp(const float* x, const float* y) {
 	//initializing memory and variables
 	float* xG;
@@ -279,17 +301,17 @@ void FullyConnected::backProp(const float* x, const float* y) {
 	cudaFree(activations);
 	cudaFree(layerError);
 }
-void FullyConnected::backPropGAN(const float* x, const float error) {
+void FullyConnected::backPropGAN(const float* x, const float* y, int disLayer) {
 	//initializing memory and variables
 	float* xG;
-	cudaMalloc(&xG, sizeof(float) * layers[0]);
-	cudaMemcpy(xG, x, sizeof(float) * layers[0], cudaMemcpyHostToDevice); //x is now in GPU memory as xG
+	float* yG;
+	cudaMalloc(&xG, sizeof(float) * layers[disLayer]);
+	cudaMalloc(&yG, sizeof(float) * layers[layerNum - 1]);
+	cudaMemcpy(xG, x, sizeof(float) * layers[disLayer], cudaMemcpyHostToDevice); //x is now in GPU memory as xG
+	cudaMemcpy(yG, y, sizeof(float) * layers[layerNum - 1], cudaMemcpyHostToDevice); //y is now in GPU memory as yG
 	float* xGOriginal; //hosts an unmodified copy of xG, since xG is modified during the forward pass
-	cudaMalloc(&xGOriginal, sizeof(float) * layers[0]); 
-	cudaMemcpy(xGOriginal, xG, sizeof(float) * layers[0], cudaMemcpyDeviceToDevice);
-	float* errorGPU;
-	cudaMalloc(&errorGPU, sizeof(float));
-
+	cudaMalloc(&xGOriginal, sizeof(float) * layers[disLayer]);
+	cudaMemcpy(xGOriginal, xG, sizeof(float) * layers[disLayer], cudaMemcpyDeviceToDevice);
 	float* nodes;
 	float* activations;
 	float* layerError;
@@ -301,7 +323,7 @@ void FullyConnected::backPropGAN(const float* x, const float error) {
 	cudaMalloc(&activations, sizeof(float) * lTot);
 	cudaMalloc(&layerError, sizeof(float) * lTot);
 	//forward pass
-	for (int i = 0; i < layerNum - 1; i++) {
+	for (int i = disLayer; i < layerNum - 1; i++) {
 		float* tempCompFP1;
 		float* tempCompFP2;
 		cudaMalloc(&tempCompFP1, sizeof(float) * layers[i + 1]);
@@ -325,15 +347,15 @@ void FullyConnected::backPropGAN(const float* x, const float error) {
 	float* tempCompOE2;
 	cudaMalloc(&tempCompOE1, sizeof(float) * layers[layerNum - 1]);
 	cudaMalloc(&tempCompOE2, sizeof(float) * layers[layerNum - 1]);
-	//definedGPUFunctions::subMatCWiseGPUMem(getaVecAtIndex(layerNum - 2, activations), yG, tempCompOE1, layers[layerNum - 1]);
+	definedGPUFunctions::subMatCWiseGPUMem(getaVecAtIndex(layerNum - 2, activations), yG, tempCompOE1, layers[layerNum - 1]);
 	//definedGPUFunctions::sigmoidPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
 	//definedGPUFunctions::reLuPrimeMatCWiseGPUMem(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
 	af->evalPrime(getnVecAtIndex(layerNum - 2, nodes), tempCompOE2, layers[layerNum - 1]);
-	definedGPUFunctions::multCompCWiseGPUMemScalar(tempCompOE2, error, geteVecAtIndex(layerNum - 2, layerError), layers[layerNum - 1]);
+	definedGPUFunctions::multCompCWiseGPUMem(tempCompOE1, tempCompOE2, geteVecAtIndex(layerNum - 2, layerError), layers[layerNum - 1]);
 	cudaFree(tempCompOE1);
 	cudaFree(tempCompOE2);
 	//backward pass
-	for (int i = layerNum - 3; i >= 0; i--) {
+	for (int i = layerNum - 3; i >= disLayer; i--) {
 		float* tempCompBP1;
 		float* tempCompBP2;
 		int* wMatDims = getwMatDimsAtIndex(i + 1);
@@ -349,7 +371,7 @@ void FullyConnected::backPropGAN(const float* x, const float error) {
 		cudaFree(tempCompBP2);
 	}
 	//perform gradient descent
-	for (int i = 0; i < layerNum - 1; i++) {
+	for (int i = disLayer; i < layerNum - 1; i++) {
 		float* tempCompGD1;
 		float* tempCompGD2;
 		float* tempCompGD4;
@@ -357,7 +379,7 @@ void FullyConnected::backPropGAN(const float* x, const float error) {
 		cudaMalloc(&tempCompGD1, sizeof(float) * wMatDims[0] * wMatDims[1]);
 		cudaMalloc(&tempCompGD2, sizeof(float) * wMatDims[0] * wMatDims[1]);
 		cudaMalloc(&tempCompGD4, sizeof(float) * wMatDims[0] * wMatDims[1]);
-		if (i == 0) {
+		if (i == disLayer) {
 			blas.gemmStandardTransposeBFromGPUMem(geteVecAtIndex(i, layerError), xGOriginal, tempCompGD4, wMatDims[0], 1, wMatDims[1]);
 			blas.geamTransposeSingleGPUMem(tempCompGD4, tempCompGD1, wMatDims[0], wMatDims[1]);
 		}
@@ -380,6 +402,7 @@ void FullyConnected::backPropGAN(const float* x, const float error) {
 		cudaFree(tempCompGD3);
 	}
 	cudaFree(xGOriginal);
+	cudaFree(yG);
 	cudaFree(nodes);
 	cudaFree(activations);
 	cudaFree(layerError);
