@@ -1,7 +1,5 @@
 # GPU Accelerated Machine Learning Framework 
 
-![Lines of code](https://img.shields.io/tokei/lines/github/tlonsway/MachineLearning?color=red&style=flat-square)
-
 ## Description
 
 This project takes advantage of GPU acceleration to perform neural network computations extremely efficiently. The project has been developed in Visual Studio 2019, and uses the cuBLAS and CUDA libraries to achieve parallelization. Although we got very good results, this project was not created to beat the existing GPU accelerated programs that already exist, and it instead was created to explore the CUDA libraries and test our understanding of neural networks. So far, we have trained the model on the MNIST dataset, started work on GANs, and trained networks with >100,000,000 nodes in under an hour.
